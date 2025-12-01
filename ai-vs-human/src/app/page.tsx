@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useCallback, useEffect } from "react";
+import { useState, useCallback, useEffect, useRef } from "react";
 import GameBoard from "@/components/GameBoard";
 import ScoreTable from "@/components/ScoreTable";
 import NumberPanel from "@/components/NumberPanel";
@@ -12,6 +12,7 @@ import {
   shuffleDeck,
   findOptimalPosition,
 } from "@/lib/ai-logic";
+import { playScoreSound, playFanfareSound } from "@/lib/sounds";
 
 interface AIDecision {
   number: number | "★";
@@ -38,6 +39,27 @@ export default function Home() {
   const [aiDecisions, setAiDecisions] = useState<AIDecision[]>([]);
   const [isProcessing, setIsProcessing] = useState(false);
   const [useGemini, setUseGemini] = useState(true);
+  const prevScoreRef = useRef(0);
+  const hasPlayedFanfareRef = useRef(false);
+
+  // 점수 변경 시 효과음 재생
+  useEffect(() => {
+    if (aiScore > prevScoreRef.current && prevScoreRef.current >= 0) {
+      playScoreSound();
+    }
+    prevScoreRef.current = aiScore;
+  }, [aiScore]);
+
+  // 게임 완료 시 빵빠레 효과음
+  useEffect(() => {
+    if (turn >= BOARD_SIZE && !hasPlayedFanfareRef.current) {
+      hasPlayedFanfareRef.current = true;
+      // 약간의 딜레이 후 빵빠레 재생
+      setTimeout(() => {
+        playFanfareSound();
+      }, 300);
+    }
+  }, [turn]);
 
   // 테마 적용
   useEffect(() => {
@@ -168,6 +190,8 @@ export default function Home() {
     setLastPlacedIndex(null);
     setAiDecisions([]);
     setIsProcessing(false);
+    prevScoreRef.current = 0;
+    hasPlayedFanfareRef.current = false;
   };
 
   const isGameFinished = turn >= BOARD_SIZE;
