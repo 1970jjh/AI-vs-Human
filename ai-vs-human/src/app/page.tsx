@@ -133,7 +133,17 @@ export default function Home() {
       const remaining = getRemainingNumbers().filter((n) => n !== num);
       let decision;
 
-      if (useGemini) {
+      // ★ 최우선: 11-19 같은 숫자가 이미 보드에 있으면 인접 배치 (Gemini보다 우선!)
+      if (typeof num === "number" && num >= 11 && num <= 19) {
+        const existingIndex = aiBoard.findIndex((cell) => cell === num);
+        if (existingIndex !== -1) {
+          // 같은 숫자가 이미 있음 → 로컬 로직으로 인접 배치 강제
+          decision = findOptimalPosition(aiBoard, num, remaining);
+        }
+      }
+
+      // 인접 배치가 아닌 경우에만 Gemini 호출
+      if (!decision && useGemini) {
         decision = await callGeminiAPI(aiBoard, num, remaining, turn + 1);
       }
 

@@ -357,7 +357,7 @@ export function findOptimalPosition(
   board: (number | "★" | null)[],
   currentNumber: number | "★",
   remainingNumbers: (number | "★")[]
-): { index: number; reason: string; confidence: number } {
+): { index: number; reason: string; confidence: number; strategy?: string } {
   const emptySlots: number[] = [];
   for (let i = 0; i < BOARD_SIZE; i++) {
     if (board[i] === null) emptySlots.push(i);
@@ -388,6 +388,7 @@ export function findOptimalPosition(
         index: bestIndex,
         reason: "조커를 배치하여 연속 구간 연결",
         confidence: 95,
+        strategy: "JOKER_BRIDGE",
       };
     }
   }
@@ -439,6 +440,7 @@ export function findOptimalPosition(
           index: bestAdjacentIdx,
           reason: bestAdjacentReason,
           confidence: 98,
+          strategy: "ADJACENT_SAME_NUMBER",
         };
       }
     }
@@ -452,6 +454,7 @@ export function findOptimalPosition(
         index: 2,
         reason: "최소값 1을 메인 존 시작(3번 칸)에 배치 - 72점 요새 전략",
         confidence: 100,
+        strategy: "ANCHOR_1",
       };
     }
   }
@@ -463,6 +466,7 @@ export function findOptimalPosition(
         index: 17,
         reason: "최대값 30을 메인 존 끝(18번 칸)에 배치 - 72점 요새 전략",
         confidence: 100,
+        strategy: "ANCHOR_30",
       };
     }
   }
@@ -523,6 +527,7 @@ export function findOptimalPosition(
           index: idx,
           reason: "메인 존에 배치 불가, 버림 존에 배치",
           confidence: 30,
+          strategy: "BUFFER_DISCARD",
         };
       }
     }
@@ -531,11 +536,12 @@ export function findOptimalPosition(
       index: emptySlots[0],
       reason: "남은 유일한 위치에 배치",
       confidence: 10,
+      strategy: "FALLBACK",
     };
   }
 
   const confidence = Math.min(95, 50 + bestScore);
-  return { index: bestIndex, reason: bestReason, confidence };
+  return { index: bestIndex, reason: bestReason, confidence, strategy: "PROBABILITY_MAIN" };
 }
 
 // 덱 생성
