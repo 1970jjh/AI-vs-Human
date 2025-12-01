@@ -236,12 +236,11 @@ export default function Home() {
                 currentNumber={currentNumber}
                 onSelectNumber={handleSelectNumber}
                 onRandomSelect={handleRandomSelect}
-                isAdmin={true}
                 disabled={isGameFinished || isProcessing}
               />
             </div>
 
-            {/* 중앙: AI 게임 보드 */}
+            {/* 중앙: AI 게임 보드 + 점수표 */}
             <div className="col-span-5">
               {isGameFinished && (
                 <div className={`mb-4 p-4 rounded-xl text-center border font-digital ${
@@ -274,15 +273,19 @@ export default function Home() {
                 isManualMode={false}
                 showPlacementMarker={true}
               />
+
+              {/* 점수표 - 게임판 아래 */}
+              <div className="mt-4">
+                <ScoreTable />
+              </div>
             </div>
 
-            {/* 오른쪽: AI 결정 패널 + 점수표 */}
-            <div className="col-span-4 space-y-4">
+            {/* 오른쪽: AI 결정 패널 (길게) */}
+            <div className="col-span-4">
               <AIDecisionPanel
                 decisions={aiDecisions}
                 currentScore={aiScore}
               />
-              <ScoreTable />
             </div>
           </div>
         </div>

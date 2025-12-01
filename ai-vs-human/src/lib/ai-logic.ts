@@ -27,7 +27,7 @@ export function findAdjacentPosition(
   return -1;
 }
 
-// 엄격한 메인 존 연속 오름차순 검사
+// 엄격한 메인 존 연속 오름차순 검사 (같은 숫자도 연속 오름차순으로 인정)
 export function checkMainZoneStrictAscending(
   board: (number | "★" | null)[],
   number: number | "★"
@@ -41,14 +41,16 @@ export function checkMainZoneStrictAscending(
     if (board[i] === null) {
       let leftValid = true;
       if (i > 0 && board[i - 1] !== null) {
-        if (board[i - 1] !== "★" && (board[i - 1] as number) >= number) {
+        // 같은 숫자는 허용 (> 사용)
+        if (board[i - 1] !== "★" && (board[i - 1] as number) > number) {
           leftValid = false;
         }
       }
 
       let rightValid = true;
       if (i < 19 && board[i + 1] !== null) {
-        if (board[i + 1] !== "★" && (board[i + 1] as number) <= number) {
+        // 같은 숫자는 허용 (< 사용)
+        if (board[i + 1] !== "★" && (board[i + 1] as number) < number) {
           rightValid = false;
         }
       }
@@ -63,7 +65,7 @@ export function checkMainZoneStrictAscending(
   return hasValidPosition;
 }
 
-// 배치 검증
+// 배치 검증 (같은 숫자도 연속 오름차순으로 인정)
 export function validateAscendingPlacement(
   board: (number | "★" | null)[],
   index: number,
@@ -72,16 +74,16 @@ export function validateAscendingPlacement(
   if (board[index] !== null) return false;
   if (number === "★") return true;
 
-  // 왼쪽 인접 숫자 확인
+  // 왼쪽 인접 숫자 확인 (같은 숫자는 허용: > 대신 >)
   if (index > 0 && board[index - 1] !== null && board[index - 1] !== "★") {
-    if ((board[index - 1] as number) >= number) {
+    if ((board[index - 1] as number) > number) {
       return false;
     }
   }
 
-  // 오른쪽 인접 숫자 확인
+  // 오른쪽 인접 숫자 확인 (같은 숫자는 허용: < 대신 <)
   if (index < 19 && board[index + 1] !== null && board[index + 1] !== "★") {
-    if ((board[index + 1] as number) <= number) {
+    if ((board[index + 1] as number) < number) {
       return false;
     }
   }
