@@ -377,6 +377,58 @@ export function findOptimalPosition(
     }
   }
 
+  // 같은 숫자 인접 배치 (11-19는 2장씩 있음)
+  if (typeof currentNumber === "number" && currentNumber >= 11 && currentNumber <= 19) {
+    // 이미 보드에 같은 숫자가 있는지 확인
+    const existingIndex = board.findIndex((cell) => cell === currentNumber);
+
+    if (existingIndex !== -1) {
+      // 앞 칸과 뒤 칸 중 빈 칸이 있는지 확인
+      const beforeIdx = existingIndex - 1;
+      const afterIdx = existingIndex + 1;
+
+      let bestAdjacentIdx = -1;
+      let bestAdjacentScore = -1;
+      let bestAdjacentReason = "";
+
+      // 앞 칸 확인
+      if (beforeIdx >= 0 && board[beforeIdx] === null) {
+        if (validateAscendingPlacement(board, beforeIdx, currentNumber)) {
+          const testBoard = [...board];
+          testBoard[beforeIdx] = currentNumber;
+          const score = calculateScore(testBoard);
+          if (score > bestAdjacentScore) {
+            bestAdjacentScore = score;
+            bestAdjacentIdx = beforeIdx;
+            bestAdjacentReason = `같은 숫자 ${currentNumber}의 앞(${beforeIdx + 1}번 칸)에 인접 배치하여 연속 구간 확장`;
+          }
+        }
+      }
+
+      // 뒤 칸 확인
+      if (afterIdx < BOARD_SIZE && board[afterIdx] === null) {
+        if (validateAscendingPlacement(board, afterIdx, currentNumber)) {
+          const testBoard = [...board];
+          testBoard[afterIdx] = currentNumber;
+          const score = calculateScore(testBoard);
+          if (score > bestAdjacentScore) {
+            bestAdjacentScore = score;
+            bestAdjacentIdx = afterIdx;
+            bestAdjacentReason = `같은 숫자 ${currentNumber}의 뒤(${afterIdx + 1}번 칸)에 인접 배치하여 연속 구간 확장`;
+          }
+        }
+      }
+
+      if (bestAdjacentIdx !== -1) {
+        return {
+          index: bestAdjacentIdx,
+          reason: bestAdjacentReason,
+          confidence: 98,
+        };
+      }
+    }
+  }
+
   // 앵커 숫자 처리 (1, 30) - 72점 요새 전략
   if (currentNumber === 1) {
     // 1은 메인 존 시작(인덱스 2, 3번째 칸)에 배치
