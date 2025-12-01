@@ -1,14 +1,28 @@
 "use client";
 
-import { createDeck } from "@/lib/ai-logic";
-
 interface NumberPanelProps {
   usedNumbers: (number | "★")[];
   currentNumber: number | "★" | null;
   onSelectNumber?: (number: number | "★") => void;
   onRandomSelect?: () => void;
-  isAdmin?: boolean;
   disabled?: boolean;
+}
+
+// 전체 카드 목록 생성 (40장: 1-10 각 1장, 11-19 각 2장, 20-30 각 1장, 조커 1장)
+function createCardList(): (number | "★")[] {
+  const cards: (number | "★")[] = [];
+  // 1-10: 각 1장
+  for (let i = 1; i <= 10; i++) cards.push(i);
+  // 11-19: 각 2장
+  for (let i = 11; i <= 19; i++) {
+    cards.push(i);
+    cards.push(i);
+  }
+  // 20-30: 각 1장
+  for (let i = 20; i <= 30; i++) cards.push(i);
+  // 조커 1장
+  cards.push("★");
+  return cards;
 }
 
 export default function NumberPanel({
@@ -18,20 +32,33 @@ export default function NumberPanel({
   onRandomSelect,
   disabled = false,
 }: NumberPanelProps) {
-  const deck = createDeck();
+  const allCards = createCardList(); // 40장
 
-  const getAvailableCount = (num: number | "★") => {
-    const totalInDeck = deck.filter((n) => n === num).length;
-    const usedCount = usedNumbers.filter((n) => n === num).length;
-    return totalInDeck - usedCount;
+  // 각 카드가 사용되었는지 추적 (인덱스 기반)
+  const getUsedIndices = () => {
+    const usedIndices: number[] = [];
+    const tempUsed = [...usedNumbers];
+
+    for (let i = 0; i < allCards.length; i++) {
+      const card = allCards[i];
+      const idx = tempUsed.indexOf(card);
+      if (idx !== -1) {
+        usedIndices.push(i);
+        tempUsed.splice(idx, 1);
+      }
+    }
+    return usedIndices;
   };
 
-  const numbers: (number | "★")[] = [];
-  for (let i = 1; i <= 30; i++) numbers.push(i);
-  numbers.push("★");
-
+  const usedIndices = getUsedIndices();
   const totalUsed = usedNumbers.length;
   const totalCards = 20;
+
+  const handleCardClick = (cardIndex: number) => {
+    if (disabled || usedIndices.includes(cardIndex)) return;
+    const card = allCards[cardIndex];
+    onSelectNumber?.(card);
+  };
 
   return (
     <div className="rounded-xl p-4 border" style={{ backgroundColor: "var(--surface)", borderColor: "var(--border)" }}>
@@ -73,21 +100,20 @@ export default function NumberPanel({
         </div>
       )}
 
-      {/* 숫자 그리드 */}
-      <div className="grid grid-cols-5 gap-1.5">
-        {numbers.map((num) => {
-          const available = getAvailableCount(num);
-          const isUsed = available <= 0;
-          const isJoker = num === "★";
-          const isCurrent = currentNumber === num;
+      {/* 숫자 그리드 - 8열 */}
+      <div className="grid grid-cols-8 gap-1">
+        {allCards.map((card, idx) => {
+          const isUsed = usedIndices.includes(idx);
+          const isJoker = card === "★";
+          const isCurrent = currentNumber === card && !isUsed;
 
           return (
             <button
-              key={num}
-              onClick={() => !isUsed && !disabled && onSelectNumber?.(num)}
+              key={idx}
+              onClick={() => handleCardClick(idx)}
               disabled={isUsed || disabled}
               className={`
-                aspect-square flex flex-col items-center justify-center rounded-lg border-2 font-digital font-bold
+                aspect-square flex items-center justify-center rounded border-2 font-digital font-bold text-xs
                 transition-all duration-200
                 ${isUsed
                   ? "bg-muted/10 border-muted/30 text-muted/50 cursor-not-allowed line-through"
@@ -100,18 +126,15 @@ export default function NumberPanel({
               `}
               style={!isUsed && !isCurrent && !isJoker ? { backgroundColor: "var(--surface)", color: "var(--text)" } : undefined}
             >
-              <span className={isJoker ? "text-lg" : "text-sm"}>{num}</span>
-              {!isJoker && available > 1 && !isUsed && (
-                <span className="text-[9px] text-muted font-mono-digital">x{available}</span>
-              )}
+              {card}
             </button>
           );
         })}
       </div>
 
       {/* 범례 */}
-      <div className="mt-4 pt-3 border-t" style={{ borderColor: "var(--border)" }}>
-        <div className="flex flex-wrap gap-3 text-xs text-muted font-mono-digital">
+      <div className="mt-3 pt-2 border-t text-xs text-muted font-mono-digital" style={{ borderColor: "var(--border)" }}>
+        <div className="flex items-center gap-4">
           <div className="flex items-center gap-1">
             <div className="w-2 h-2 bg-muted/50 rounded" />
             <span>사용됨</span>
@@ -120,10 +143,9 @@ export default function NumberPanel({
             <div className="w-2 h-2 bg-purple-500 rounded" />
             <span>조커</span>
           </div>
-          <div className="flex items-center gap-1">
-            <span className="text-muted">x2</span>
-            <span>2장 남음</span>
-          </div>
+        </div>
+        <div className="mt-1 text-muted/70">
+          11~19: 각 2장씩
         </div>
       </div>
     </div>
