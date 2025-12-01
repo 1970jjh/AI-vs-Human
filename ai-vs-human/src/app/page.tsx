@@ -229,7 +229,7 @@ export default function Home() {
       <main className="flex-1 p-6">
         <div className="max-w-7xl mx-auto">
           <div className="grid grid-cols-12 gap-6">
-            {/* 왼쪽: 숫자 선택 패널 */}
+            {/* 왼쪽: 숫자 선택 패널 + 점수표 */}
             <div className="col-span-3">
               <NumberPanel
                 usedNumbers={usedNumbers}
@@ -238,9 +238,13 @@ export default function Home() {
                 onRandomSelect={handleRandomSelect}
                 disabled={isGameFinished || isProcessing}
               />
+              {/* 점수표 - 숫자판 아래 */}
+              <div className="mt-4">
+                <ScoreTable />
+              </div>
             </div>
 
-            {/* 중앙: AI 게임 보드 + 점수표 */}
+            {/* 중앙: AI 게임 보드 */}
             <div className="col-span-5">
               {isGameFinished && (
                 <div className={`mb-4 p-4 rounded-xl text-center border font-digital ${
@@ -273,11 +277,6 @@ export default function Home() {
                 isManualMode={false}
                 showPlacementMarker={true}
               />
-
-              {/* 점수표 - 게임판 아래 */}
-              <div className="mt-4">
-                <ScoreTable />
-              </div>
             </div>
 
             {/* 오른쪽: AI 결정 패널 (길게) */}
