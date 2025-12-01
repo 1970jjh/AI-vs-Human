@@ -2,8 +2,8 @@ import type { Metadata } from "next";
 import "./globals.css";
 
 export const metadata: Metadata = {
-  title: "AI vs 집단지성 - JJ CREATIVE 교육연구소",
-  description: "스트림스 보드게임 AI 챌린지",
+  title: "AI vs Human - 72점 요새 전략",
+  description: "AI가 최적의 위치에 숫자를 배치합니다",
 };
 
 export default function RootLayout({
