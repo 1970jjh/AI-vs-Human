@@ -6,6 +6,7 @@ interface AIDecision {
   reason: string;
   confidence: number;
   timestamp: number;
+  strategy?: string;
 }
 
 interface AIDecisionPanelProps {
@@ -91,6 +92,15 @@ export default function AIDecisionPanel({
                   style={{ width: `${decision.confidence}%` }}
                 />
               </div>
+
+              {/* 전략 */}
+              {decision.strategy && (
+                <div className="mb-2">
+                  <span className="px-2 py-0.5 text-xs bg-blue-500/20 text-blue-400 rounded">
+                    {decision.strategy}
+                  </span>
+                </div>
+              )}
 
               {/* 이유 */}
               <p className="text-sm text-muted">{decision.reason}</p>
