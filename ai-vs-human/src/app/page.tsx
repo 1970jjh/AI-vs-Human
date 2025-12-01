@@ -171,7 +171,7 @@ export default function Home() {
           <div>
             <h1 className="text-2xl font-bold text-primary">AI vs Human</h1>
             <p className="text-sm text-muted">
-              {useGemini ? "Gemini 2.0 Flash AI" : "로컬 72점 요새 전략"}
+              {useGemini ? "Gemini 2.5 Pro AI" : "로컬 72점 요새 전략"}
             </p>
           </div>
           <div className="flex items-center gap-4">
