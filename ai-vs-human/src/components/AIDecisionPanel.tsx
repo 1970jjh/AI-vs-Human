@@ -71,7 +71,7 @@ export default function AIDecisionPanel({
           <p className="font-mono-digital text-sm text-center">숫자를 선택하면 AI가<br/>최적의 위치에 배치합니다</p>
         </div>
       ) : (
-        <div className="flex-1 space-y-2 overflow-y-auto pr-1 scrollbar-thin">
+        <div className="space-y-2 overflow-y-auto pr-1 scrollbar-thin" style={{ maxHeight: '420px' }}>
           {decisions.map((decision, idx) => (
             <div
               key={decision.timestamp}
