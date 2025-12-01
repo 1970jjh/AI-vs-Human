@@ -293,6 +293,16 @@ export default function Home() {
               {useGemini ? "Gemini 3.0 Pro AI" : "로컬 72점 요새 전략"}
             </p>
           </div>
+
+          {/* 중앙 슬로건 */}
+          <div className="flex-1 flex justify-center">
+            <div className="px-6 py-2 rounded-xl bg-gradient-to-r from-cyan-500/10 via-purple-500/10 to-pink-500/10 border border-cyan-500/30">
+              <span className="font-digital text-xl font-bold tracking-wider bg-gradient-to-r from-cyan-400 via-purple-400 to-pink-400 bg-clip-text text-transparent">
+                JJ CREATIVE EDU with AI
+              </span>
+            </div>
+          </div>
+
           <div className="flex items-center gap-4">
             {/* 다크/라이트 모드 토글 */}
             <button
@@ -356,13 +366,6 @@ export default function Home() {
 
             {/* 중앙: AI 게임 보드 */}
             <div className="col-span-5 flex flex-col">
-              {/* 슬로건 */}
-              <div className="mb-2 text-center">
-                <span className="font-mono-digital text-sm text-cyan-400/70 tracking-wider">
-                  JJ CREATIVE EDU with AI
-                </span>
-              </div>
-
               {isGameFinished && (
                 <div className={`mb-3 p-3 rounded-xl text-center border font-digital ${
                   aiScore >= 72
