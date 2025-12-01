@@ -226,9 +226,9 @@ export default function Home() {
       </header>
 
       {/* 메인 콘텐츠 */}
-      <main className="flex-1 p-4">
+      <main className="flex-1 p-4 min-h-0 overflow-hidden">
         <div className="max-w-7xl mx-auto h-full">
-          <div className="grid grid-cols-12 gap-4 h-full">
+          <div className="grid grid-cols-12 gap-4 h-full" style={{ minHeight: '600px' }}>
             {/* 왼쪽: 숫자 선택 패널 + 점수표 */}
             <div className="col-span-3 flex flex-col">
               <NumberPanel
@@ -245,7 +245,7 @@ export default function Home() {
             </div>
 
             {/* 중앙: AI 게임 보드 */}
-            <div className="col-span-5 flex flex-col">
+            <div className="col-span-4 flex flex-col">
               {isGameFinished && (
                 <div className={`mb-3 p-3 rounded-xl text-center border font-digital ${
                   aiScore >= 72
@@ -279,8 +279,8 @@ export default function Home() {
               />
             </div>
 
-            {/* 오른쪽: AI 결정 패널 (세로로 전체 차지) */}
-            <div className="col-span-4 flex flex-col">
+            {/* 오른쪽: AI 결정 패널 (세로로 전체 차지, 더 넓게) */}
+            <div className="col-span-5 flex flex-col min-h-0">
               <AIDecisionPanel
                 decisions={aiDecisions}
                 currentScore={aiScore}

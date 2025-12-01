@@ -159,7 +159,7 @@ export default function GameBoard({
   };
 
   return (
-    <div className="bg-surface/30 rounded-xl p-4 border border-border">
+    <div className="bg-surface/30 glass-effect rounded-xl p-4 border border-border">
       {/* 범례 */}
       {showPlacementMarker && (
         <div className="flex items-center justify-end gap-4 mb-3 text-xs text-muted font-mono-digital">
@@ -175,9 +175,9 @@ export default function GameBoard({
       )}
 
       {/* 전체 레이아웃 - 역ㄷ자 형태 */}
-      <div className="flex">
-        {/* 왼쪽: 점수 표시 영역 (역ㄷ자 가운데) */}
-        <div className="flex flex-col items-center justify-center pr-4" style={{ minWidth: '120px' }}>
+      <div className="flex relative">
+        {/* 중앙: 점수 표시 영역 (게임판 정중앙에 절대 위치) */}
+        <div className="absolute inset-0 flex items-center justify-center pointer-events-none" style={{ marginLeft: '60px' }}>
           <div className="text-center">
             <div className="font-digital text-lg text-muted mb-1">{teamName}</div>
             <div className="font-digital text-6xl font-black text-primary drop-shadow-lg">
@@ -186,6 +186,9 @@ export default function GameBoard({
             <div className="font-digital text-base text-muted mt-1">POINTS</div>
           </div>
         </div>
+
+        {/* 왼쪽 여백 */}
+        <div style={{ minWidth: '120px' }} />
 
         {/* 오른쪽: 보드 영역 */}
         <div className="flex flex-col">

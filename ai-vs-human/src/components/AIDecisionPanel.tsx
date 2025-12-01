@@ -33,9 +33,9 @@ export default function AIDecisionPanel({
   };
 
   return (
-    <div className="bg-surface rounded-xl p-4 border border-border h-full flex flex-col">
+    <div className="bg-surface rounded-xl p-4 border border-border h-full flex flex-col min-h-0">
       {/* 헤더 + 통계 */}
-      <div className="mb-3">
+      <div className="mb-3 flex-shrink-0">
         <h3 className="font-digital font-bold text-lg text-primary mb-2">
           Gemini 2.5 Pro AI vs Human
         </h3>
@@ -64,14 +64,14 @@ export default function AIDecisionPanel({
         </div>
       </div>
 
-      {/* 결정 목록 - 스크롤 가능 */}
+      {/* 결정 목록 - 스크롤 가능, flex-1로 남은 공간 채움 */}
       {decisions.length === 0 ? (
         <div className="flex-1 flex flex-col items-center justify-center text-muted">
           <div className="text-4xl mb-2">🤖</div>
           <p className="font-mono-digital text-sm text-center">숫자를 선택하면 AI가<br/>최적의 위치에 배치합니다</p>
         </div>
       ) : (
-        <div className="space-y-2 overflow-y-auto pr-1 scrollbar-thin" style={{ maxHeight: '420px' }}>
+        <div className="flex-1 space-y-2 overflow-y-auto pr-1 scrollbar-thin min-h-0">
           {decisions.map((decision, idx) => (
             <div
               key={decision.timestamp}
