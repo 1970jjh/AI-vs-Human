@@ -180,6 +180,7 @@ export function calculateScore(board: (number | "★" | null)[]): number {
 }
 
 // 동적 프로그래밍을 이용한 점수 계산
+// 주의: 연속된 보드 위치에 있는 셀만 런으로 인정
 export function calculateOptimalScore(board: (number | "★" | null)[]) {
   const filledElements: (number | "★")[] = [];
   const positionMap: number[] = [];
@@ -218,6 +219,20 @@ export function calculateOptimalScore(board: (number | "★" | null)[]) {
 
     // 옵션 2: 이전 요소들과 연결하여 런 확장
     for (let j = i - 1; j >= 0; j--) {
+      // 보드에서 연속된 위치인지 확인 (핵심 수정!)
+      // positionMap[j]부터 positionMap[i]까지 연속된 보드 위치여야 함
+      let isConsecutivePositions = true;
+      for (let k = j; k < i; k++) {
+        if (positionMap[k + 1] !== positionMap[k] + 1) {
+          isConsecutivePositions = false;
+          break;
+        }
+      }
+
+      if (!isConsecutivePositions) {
+        break; // 연속이 끊기면 더 이상 확장 불가
+      }
+
       const runElements = filledElements.slice(j, i + 1);
 
       if (isValidOptimalRun(runElements)) {

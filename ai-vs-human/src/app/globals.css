@@ -34,6 +34,8 @@
   --cell-text: #374151;
   --filled-cell-bg: #d1fae5;
   --filled-cell-border: #059669;
+  --glass-bg: rgba(255, 255, 255, 0.25);
+  --glass-border: rgba(255, 255, 255, 0.4);
 }
 
 body {
@@ -118,4 +120,13 @@ body {
 /* 라이트모드 텍스트 색상 오버라이드 */
 :root.light .text-white {
   color: var(--text-strong);
+}
+
+/* 라이트모드 글래스모피즘 효과 */
+:root.light .glass-effect {
+  background: var(--glass-bg);
+  backdrop-filter: blur(12px);
+  -webkit-backdrop-filter: blur(12px);
+  border: 1px solid var(--glass-border);
+  box-shadow: 0 8px 32px rgba(0, 0, 0, 0.1);
 }
