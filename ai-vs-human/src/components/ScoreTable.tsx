@@ -6,14 +6,14 @@ export default function ScoreTable() {
   const scores = SCORE_TABLE.slice(1); // 0번 인덱스 제외
 
   return (
-    <div className="bg-surface rounded-xl p-3 border border-border">
+    <div className="bg-surface rounded-xl p-3 border border-border h-full flex flex-col">
       <h3 className="text-xs font-digital font-bold text-muted mb-2">점수표</h3>
 
-      <div className="grid grid-cols-4 gap-1 text-xs">
+      <div className="grid grid-cols-5 gap-1 text-xs flex-1 content-start">
         {scores.map((score, idx) => (
           <div
             key={idx}
-            className={`flex justify-between items-center px-1.5 py-0.5 rounded font-mono-digital ${
+            className={`flex justify-between items-center px-1.5 py-1 rounded font-mono-digital ${
               idx + 1 === 16 ? "bg-primary/20 border border-primary/50" : "bg-surface/50"
             }`}
           >
