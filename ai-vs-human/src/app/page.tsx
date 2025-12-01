@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useCallback } from "react";
+import { useState, useCallback, useEffect } from "react";
 import GameBoard from "@/components/GameBoard";
 import ScoreTable from "@/components/ScoreTable";
 import NumberPanel from "@/components/NumberPanel";
@@ -23,6 +23,9 @@ interface AIDecision {
 }
 
 export default function Home() {
+  // 테마 상태
+  const [isDarkMode, setIsDarkMode] = useState(true);
+
   // 게임 상태
   const [aiBoard, setAiBoard] = useState<(number | "★" | null)[]>(
     Array(BOARD_SIZE).fill(null)
@@ -35,6 +38,15 @@ export default function Home() {
   const [aiDecisions, setAiDecisions] = useState<AIDecision[]>([]);
   const [isProcessing, setIsProcessing] = useState(false);
   const [useGemini, setUseGemini] = useState(true);
+
+  // 테마 적용
+  useEffect(() => {
+    if (isDarkMode) {
+      document.documentElement.classList.remove("light");
+    } else {
+      document.documentElement.classList.add("light");
+    }
+  }, [isDarkMode]);
 
   // 남은 숫자 계산
   const getRemainingNumbers = useCallback(() => {
@@ -100,11 +112,9 @@ export default function Home() {
       let decision;
 
       if (useGemini) {
-        // Gemini API 사용
         decision = await callGeminiAPI(aiBoard, num, remaining, turn + 1);
       }
 
-      // Gemini 실패 시 또는 비활성화 시 로컬 로직 사용
       if (!decision) {
         decision = findOptimalPosition(aiBoard, num, remaining);
       }
@@ -116,7 +126,6 @@ export default function Home() {
         setAiScore(calculateScore(newBoard));
         setLastPlacedIndex(decision.index);
 
-        // AI 결정 기록
         setAiDecisions((prev) => [
           {
             number: num,
@@ -164,21 +173,34 @@ export default function Home() {
   const isGameFinished = turn >= BOARD_SIZE;
 
   return (
-    <div className="min-h-screen flex flex-col bg-background">
+    <div className="min-h-screen flex flex-col" style={{ backgroundColor: "var(--background)" }}>
       {/* 헤더 */}
-      <header className="bg-surface border-b border-border px-6 py-4">
+      <header className="border-b px-6 py-4" style={{ backgroundColor: "var(--surface)", borderColor: "var(--border)" }}>
         <div className="max-w-7xl mx-auto flex items-center justify-between">
           <div>
-            <h1 className="text-2xl font-bold text-primary">AI vs Human</h1>
-            <p className="text-sm text-muted">
+            <h1 className="font-digital text-3xl font-bold text-primary">AI vs Human</h1>
+            <p className="font-mono-digital text-sm text-muted">
               {useGemini ? "Gemini 2.5 Pro AI" : "로컬 72점 요새 전략"}
             </p>
           </div>
           <div className="flex items-center gap-4">
+            {/* 다크/라이트 모드 토글 */}
+            <button
+              onClick={() => setIsDarkMode(!isDarkMode)}
+              className="px-3 py-1.5 rounded-lg text-sm font-digital font-medium transition-colors border"
+              style={{
+                backgroundColor: isDarkMode ? "rgba(255,255,255,0.1)" : "rgba(0,0,0,0.1)",
+                borderColor: "var(--border)",
+                color: "var(--text)"
+              }}
+            >
+              {isDarkMode ? "🌙 Dark" : "☀️ Light"}
+            </button>
+
             {/* AI 모드 토글 */}
             <button
               onClick={() => setUseGemini(!useGemini)}
-              className={`px-3 py-1.5 rounded-lg text-sm font-medium transition-colors ${
+              className={`px-3 py-1.5 rounded-lg text-sm font-digital font-medium transition-colors ${
                 useGemini
                   ? "bg-blue-500/20 text-blue-400 border border-blue-500/50"
                   : "bg-muted/20 text-muted border border-muted/50"
@@ -188,14 +210,14 @@ export default function Home() {
             </button>
 
             <div className="text-center">
-              <div className="text-xs text-muted">라운드</div>
-              <div className="text-xl font-bold">
+              <div className="text-xs text-muted font-mono-digital">라운드</div>
+              <div className="font-digital text-xl font-bold" style={{ color: "var(--text)" }}>
                 {turn}/{BOARD_SIZE}
               </div>
             </div>
             <button
               onClick={handleReset}
-              className="px-4 py-2 bg-red-500/20 text-red-400 rounded-lg hover:bg-red-500/30 transition-colors"
+              className="px-4 py-2 bg-red-500/20 text-red-400 rounded-lg hover:bg-red-500/30 transition-colors font-digital"
             >
               리셋
             </button>
@@ -222,7 +244,7 @@ export default function Home() {
             {/* 중앙: AI 게임 보드 */}
             <div className="col-span-5">
               {isGameFinished && (
-                <div className={`mb-4 p-4 rounded-xl text-center border ${
+                <div className={`mb-4 p-4 rounded-xl text-center border font-digital ${
                   aiScore >= 72
                     ? "bg-accent/20 border-accent/50"
                     : "bg-yellow-500/20 border-yellow-500/50"
@@ -238,7 +260,7 @@ export default function Home() {
 
               {isProcessing && currentNumber !== null && (
                 <div className="mb-4 p-4 bg-primary/20 border border-primary/50 rounded-xl text-center animate-pulse">
-                  <span className="text-primary font-bold">
+                  <span className="text-primary font-digital font-bold">
                     {useGemini ? "Gemini AI가" : "AI가"} 숫자 {currentNumber}의 최적 위치를 분석 중...
                   </span>
                 </div>
@@ -251,7 +273,6 @@ export default function Home() {
                 highlightIndex={lastPlacedIndex ?? undefined}
                 isManualMode={false}
                 showPlacementMarker={true}
-                showScoreMarker={true}
               />
             </div>
 

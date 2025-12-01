@@ -1,7 +1,10 @@
+@import url('https://fonts.googleapis.com/css2?family=Orbitron:wght@400;500;600;700;800;900&family=Share+Tech+Mono&display=swap');
+
 @tailwind base;
 @tailwind components;
 @tailwind utilities;
 
+/* 다크모드 (기본) */
 :root {
   --background: #0a0a0f;
   --surface: #12121a;
@@ -9,11 +12,35 @@
   --primary: #a855f7;
   --accent: #22c55e;
   --muted: #6b7280;
+  --text: #e5e5e5;
+  --text-strong: #ffffff;
+}
+
+/* 라이트모드 */
+:root.light {
+  --background: #f5f5f7;
+  --surface: #ffffff;
+  --border: #e0e0e0;
+  --primary: #9333ea;
+  --accent: #16a34a;
+  --muted: #6b7280;
+  --text: #1f2937;
+  --text-strong: #000000;
 }
 
 body {
   background-color: var(--background);
-  color: #e5e5e5;
+  color: var(--text);
+  font-family: 'Share Tech Mono', 'Courier New', monospace;
+}
+
+/* 디지털 폰트 클래스 */
+.font-digital {
+  font-family: 'Orbitron', sans-serif;
+}
+
+.font-mono-digital {
+  font-family: 'Share Tech Mono', monospace;
 }
 
 /* Custom scrollbar */
@@ -59,4 +86,9 @@ body {
 
 .animate-blink {
   animation: blink 1s ease-in-out infinite;
+}
+
+/* 라이트모드 텍스트 색상 오버라이드 */
+:root.light .text-white {
+  color: var(--text-strong);
 }
