@@ -23,7 +23,14 @@ interface AIDecision {
   strategy?: string;
 }
 
+const ADMIN_PASSWORD = "6749467";
+
 export default function Home() {
+  // 인증 상태
+  const [isAuthenticated, setIsAuthenticated] = useState(false);
+  const [passwordInput, setPasswordInput] = useState("");
+  const [passwordError, setPasswordError] = useState(false);
+
   // 테마 상태
   const [isDarkMode, setIsDarkMode] = useState(true);
 
@@ -206,6 +213,75 @@ export default function Home() {
 
   const isGameFinished = turn >= BOARD_SIZE;
 
+  // 비밀번호 확인
+  const handlePasswordSubmit = (e: React.FormEvent) => {
+    e.preventDefault();
+    if (passwordInput === ADMIN_PASSWORD) {
+      setIsAuthenticated(true);
+      setPasswordError(false);
+    } else {
+      setPasswordError(true);
+      setPasswordInput("");
+    }
+  };
+
+  // 로그인 화면
+  if (!isAuthenticated) {
+    return (
+      <div className="min-h-screen flex items-center justify-center" style={{ backgroundColor: "var(--background)" }}>
+        <div className="w-full max-w-md p-8 rounded-2xl border" style={{ backgroundColor: "var(--surface)", borderColor: "var(--border)" }}>
+          {/* 로고 */}
+          <div className="text-center mb-8">
+            <div className="px-4 py-3 rounded-xl bg-gradient-to-r from-purple-500/20 via-blue-500/20 to-cyan-500/20 backdrop-blur-sm border border-purple-500/30 inline-block">
+              <h1 className="font-digital text-3xl font-bold bg-gradient-to-r from-purple-400 via-pink-400 to-cyan-400 bg-clip-text text-transparent">
+                AI vs Human
+              </h1>
+              <p className="font-mono-digital text-sm text-cyan-400/80 mt-1">
+                Gemini 3.0 Pro AI
+              </p>
+            </div>
+            <p className="font-mono-digital text-xs text-muted mt-4">
+              JJ CREATIVE EDU with AI
+            </p>
+          </div>
+
+          {/* 비밀번호 입력 폼 */}
+          <form onSubmit={handlePasswordSubmit} className="space-y-4">
+            <div>
+              <label className="block text-sm font-mono-digital text-muted mb-2">
+                관리자 비밀번호
+              </label>
+              <input
+                type="password"
+                value={passwordInput}
+                onChange={(e) => setPasswordInput(e.target.value)}
+                placeholder="비밀번호를 입력하세요"
+                className="w-full px-4 py-3 rounded-lg border font-mono-digital text-center text-lg tracking-widest"
+                style={{
+                  backgroundColor: "var(--background)",
+                  borderColor: passwordError ? "#ef4444" : "var(--border)",
+                  color: "var(--text)"
+                }}
+                autoFocus
+              />
+              {passwordError && (
+                <p className="text-red-400 text-sm font-mono-digital mt-2 text-center">
+                  비밀번호가 올바르지 않습니다
+                </p>
+              )}
+            </div>
+            <button
+              type="submit"
+              className="w-full py-3 rounded-lg font-digital font-bold text-lg bg-gradient-to-r from-purple-500 to-cyan-500 text-white hover:opacity-90 transition-opacity"
+            >
+              입장하기
+            </button>
+          </form>
+        </div>
+      </div>
+    );
+  }
+
   return (
     <div className="min-h-screen flex flex-col" style={{ backgroundColor: "var(--background)" }}>
       {/* 헤더 */}
@@ -280,6 +356,13 @@ export default function Home() {
 
             {/* 중앙: AI 게임 보드 */}
             <div className="col-span-5 flex flex-col">
+              {/* 슬로건 */}
+              <div className="mb-2 text-center">
+                <span className="font-mono-digital text-sm text-cyan-400/70 tracking-wider">
+                  JJ CREATIVE EDU with AI
+                </span>
+              </div>
+
               {isGameFinished && (
                 <div className={`mb-3 p-3 rounded-xl text-center border font-digital ${
                   aiScore >= 72
