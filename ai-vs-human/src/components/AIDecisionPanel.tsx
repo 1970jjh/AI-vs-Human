@@ -37,7 +37,7 @@ export default function AIDecisionPanel({
       {/* 헤더 + 통계 */}
       <div className="mb-3 flex-shrink-0">
         <h3 className="font-digital font-bold text-lg text-primary mb-2">
-          Gemini 2.5 Pro AI vs Human
+          Gemini 3.0 Pro AI vs Human
         </h3>
 
         {/* 통계 - 제목 바로 아래 */}

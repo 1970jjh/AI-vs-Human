@@ -177,10 +177,10 @@ export default function Home() {
       {/* 헤더 */}
       <header className="border-b px-6 py-4" style={{ backgroundColor: "var(--surface)", borderColor: "var(--border)" }}>
         <div className="max-w-7xl mx-auto flex items-center justify-between">
-          <div>
-            <h1 className="font-digital text-3xl font-bold text-primary">AI vs Human</h1>
-            <p className="font-mono-digital text-sm text-muted">
-              {useGemini ? "Gemini 2.5 Pro AI" : "로컬 72점 요새 전략"}
+          <div className="px-4 py-2 rounded-xl bg-gradient-to-r from-purple-500/20 via-blue-500/20 to-cyan-500/20 backdrop-blur-sm border border-purple-500/30 shadow-lg shadow-purple-500/10">
+            <h1 className="font-digital text-3xl font-bold bg-gradient-to-r from-purple-400 via-pink-400 to-cyan-400 bg-clip-text text-transparent drop-shadow-lg">AI vs Human</h1>
+            <p className="font-mono-digital text-sm text-cyan-400/80">
+              {useGemini ? "Gemini 3.0 Pro AI" : "로컬 72점 요새 전략"}
             </p>
           </div>
           <div className="flex items-center gap-4">
