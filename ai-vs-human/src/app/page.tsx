@@ -226,11 +226,11 @@ export default function Home() {
       </header>
 
       {/* 메인 콘텐츠 */}
-      <main className="flex-1 p-6">
-        <div className="max-w-7xl mx-auto">
-          <div className="grid grid-cols-12 gap-6">
+      <main className="flex-1 p-4">
+        <div className="max-w-7xl mx-auto h-full">
+          <div className="grid grid-cols-12 gap-4 h-full">
             {/* 왼쪽: 숫자 선택 패널 + 점수표 */}
-            <div className="col-span-3">
+            <div className="col-span-3 flex flex-col">
               <NumberPanel
                 usedNumbers={usedNumbers}
                 currentNumber={currentNumber}
@@ -238,21 +238,21 @@ export default function Home() {
                 onRandomSelect={handleRandomSelect}
                 disabled={isGameFinished || isProcessing}
               />
-              {/* 점수표 - 숫자판 아래 */}
-              <div className="mt-4">
+              {/* 점수표 - 숫자판 아래 (남은 공간 채움) */}
+              <div className="mt-3 flex-1">
                 <ScoreTable />
               </div>
             </div>
 
             {/* 중앙: AI 게임 보드 */}
-            <div className="col-span-5">
+            <div className="col-span-5 flex flex-col">
               {isGameFinished && (
-                <div className={`mb-4 p-4 rounded-xl text-center border font-digital ${
+                <div className={`mb-3 p-3 rounded-xl text-center border font-digital ${
                   aiScore >= 72
                     ? "bg-accent/20 border-accent/50"
                     : "bg-yellow-500/20 border-yellow-500/50"
                 }`}>
-                  <span className={`text-2xl font-bold ${
+                  <span className={`text-xl font-bold ${
                     aiScore >= 72 ? "text-accent" : "text-yellow-400"
                   }`}>
                     게임 완료! 최종 점수: {aiScore}점
@@ -262,8 +262,8 @@ export default function Home() {
               )}
 
               {isProcessing && currentNumber !== null && (
-                <div className="mb-4 p-4 bg-primary/20 border border-primary/50 rounded-xl text-center animate-pulse">
-                  <span className="text-primary font-digital font-bold">
+                <div className="mb-3 p-3 bg-primary/20 border border-primary/50 rounded-xl text-center animate-pulse">
+                  <span className="text-primary font-digital font-bold text-sm">
                     {useGemini ? "Gemini AI가" : "AI가"} 숫자 {currentNumber}의 최적 위치를 분석 중...
                   </span>
                 </div>
@@ -279,8 +279,8 @@ export default function Home() {
               />
             </div>
 
-            {/* 오른쪽: AI 결정 패널 (길게) */}
-            <div className="col-span-4">
+            {/* 오른쪽: AI 결정 패널 (세로로 전체 차지) */}
+            <div className="col-span-4 flex flex-col">
               <AIDecisionPanel
                 decisions={aiDecisions}
                 currentScore={aiScore}

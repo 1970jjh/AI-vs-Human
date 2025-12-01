@@ -377,24 +377,24 @@ export function findOptimalPosition(
     }
   }
 
-  // 앵커 숫자 처리 (1, 30)
+  // 앵커 숫자 처리 (1, 30) - 72점 요새 전략
   if (currentNumber === 1) {
-    // 1은 왼쪽 끝(인덱스 0)에 배치
-    if (board[0] === null) {
+    // 1은 메인 존 시작(인덱스 2, 3번째 칸)에 배치
+    if (board[2] === null) {
       return {
-        index: 0,
-        reason: "최소값 1을 왼쪽 앵커 위치에 배치",
+        index: 2,
+        reason: "최소값 1을 메인 존 시작(3번 칸)에 배치 - 72점 요새 전략",
         confidence: 100,
       };
     }
   }
 
   if (currentNumber === 30) {
-    // 30은 오른쪽 끝(인덱스 19)에 배치
-    if (board[19] === null) {
+    // 30은 메인 존 끝(인덱스 17, 18번째 칸)에 배치
+    if (board[17] === null) {
       return {
-        index: 19,
-        reason: "최대값 30을 오른쪽 앵커 위치에 배치",
+        index: 17,
+        reason: "최대값 30을 메인 존 끝(18번 칸)에 배치 - 72점 요새 전략",
         confidence: 100,
       };
     }
