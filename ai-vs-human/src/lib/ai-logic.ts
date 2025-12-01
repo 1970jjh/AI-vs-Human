@@ -335,6 +335,140 @@ export function findFirstEmptySlot(board: (number | "★" | null)[]): number {
   return -1;
 }
 
+// AI 최적 위치 찾기 (72점 요새 전략 기반)
+export function findOptimalPosition(
+  board: (number | "★" | null)[],
+  currentNumber: number | "★",
+  remainingNumbers: (number | "★")[]
+): { index: number; reason: string; confidence: number } {
+  const emptySlots: number[] = [];
+  for (let i = 0; i < BOARD_SIZE; i++) {
+    if (board[i] === null) emptySlots.push(i);
+  }
+
+  if (emptySlots.length === 0) {
+    return { index: -1, reason: "빈 칸 없음", confidence: 0 };
+  }
+
+  // 조커(★) 처리 - 가장 필요한 위치에 배치
+  if (currentNumber === "★") {
+    // 끊긴 연속 구간을 이어줄 수 있는 위치 찾기
+    let bestIndex = -1;
+    let bestScore = -1;
+
+    for (const idx of emptySlots) {
+      const testBoard = [...board];
+      testBoard[idx] = "★";
+      const score = calculateScore(testBoard);
+      if (score > bestScore) {
+        bestScore = score;
+        bestIndex = idx;
+      }
+    }
+
+    if (bestIndex !== -1) {
+      return {
+        index: bestIndex,
+        reason: "조커를 배치하여 연속 구간 연결",
+        confidence: 95,
+      };
+    }
+  }
+
+  // 앵커 숫자 처리 (1, 30)
+  if (currentNumber === 1) {
+    // 1은 왼쪽 끝(인덱스 0)에 배치
+    if (board[0] === null) {
+      return {
+        index: 0,
+        reason: "최소값 1을 왼쪽 앵커 위치에 배치",
+        confidence: 100,
+      };
+    }
+  }
+
+  if (currentNumber === 30) {
+    // 30은 오른쪽 끝(인덱스 19)에 배치
+    if (board[19] === null) {
+      return {
+        index: 19,
+        reason: "최대값 30을 오른쪽 앵커 위치에 배치",
+        confidence: 100,
+      };
+    }
+  }
+
+  // 일반 숫자: 확률 기반 위치 계산
+  const numericRemaining = remainingNumbers.filter(
+    (n): n is number => n !== "★" && typeof n === "number"
+  );
+  const lessThanCurrent = numericRemaining.filter((n) => n < (currentNumber as number)).length;
+  const moreThanCurrent = numericRemaining.filter((n) => n > (currentNumber as number)).length;
+  const total = lessThanCurrent + moreThanCurrent;
+
+  // 확률 기반 이상적인 위치 계산 (메인 존: 2-17)
+  const ratio = total > 0 ? lessThanCurrent / total : 0.5;
+  const idealIndex = Math.round(2 + 15 * ratio);
+
+  // 유효한 위치 찾기 (오름차순 유지)
+  let bestIndex = -1;
+  let bestScore = -Infinity;
+  let bestReason = "";
+
+  for (const idx of emptySlots) {
+    if (!validateAscendingPlacement(board, idx, currentNumber as number)) {
+      continue;
+    }
+
+    // 점수 시뮬레이션
+    const testBoard = [...board];
+    testBoard[idx] = currentNumber;
+    const score = calculateScore(testBoard);
+
+    // 이상적인 위치와의 거리 고려
+    const distanceFromIdeal = Math.abs(idx - idealIndex);
+    const positionBonus = (15 - distanceFromIdeal) * 2;
+    const totalScore = score + positionBonus;
+
+    if (totalScore > bestScore) {
+      bestScore = totalScore;
+      bestIndex = idx;
+
+      // 이유 생성
+      if (idx === idealIndex) {
+        bestReason = `확률 기반 최적 위치 (남은 숫자 중 ${lessThanCurrent}개 작음, ${moreThanCurrent}개 큼)`;
+      } else if (distanceFromIdeal <= 2) {
+        bestReason = `최적 위치 근처 배치 (점수: ${score}점)`;
+      } else {
+        bestReason = `유효한 위치 중 최고 점수 (${score}점)`;
+      }
+    }
+  }
+
+  // 유효한 위치가 없으면 버리는 존(0, 1, 18, 19)에 배치
+  if (bestIndex === -1) {
+    const discardZones = [0, 1, 18, 19];
+    for (const idx of discardZones) {
+      if (board[idx] === null) {
+        return {
+          index: idx,
+          reason: "메인 존에 배치 불가, 버림 존에 배치",
+          confidence: 30,
+        };
+      }
+    }
+    // 아무 빈 칸에라도 배치
+    return {
+      index: emptySlots[0],
+      reason: "남은 유일한 위치에 배치",
+      confidence: 10,
+    };
+  }
+
+  const confidence = Math.min(95, 50 + bestScore);
+  return { index: bestIndex, reason: bestReason, confidence };
+}
+
 // 덱 생성
 export function createDeck(): (number | "★")[] {
   const deck: (number | "★")[] = [];
