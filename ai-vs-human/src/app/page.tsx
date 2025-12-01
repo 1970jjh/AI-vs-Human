@@ -177,10 +177,10 @@ export default function Home() {
       {/* 헤더 */}
       <header className="border-b px-6 py-4" style={{ backgroundColor: "var(--surface)", borderColor: "var(--border)" }}>
         <div className="max-w-7xl mx-auto flex items-center justify-between">
-          <div>
-            <h1 className="font-digital text-3xl font-bold text-primary">AI vs Human</h1>
-            <p className="font-mono-digital text-sm text-muted">
-              {useGemini ? "Gemini 2.5 Pro AI" : "로컬 72점 요새 전략"}
+          <div className="px-4 py-2 rounded-xl bg-gradient-to-r from-purple-500/20 via-blue-500/20 to-cyan-500/20 backdrop-blur-sm border border-purple-500/30 shadow-lg shadow-purple-500/10">
+            <h1 className="font-digital text-3xl font-bold bg-gradient-to-r from-purple-400 via-pink-400 to-cyan-400 bg-clip-text text-transparent drop-shadow-lg">AI vs Human</h1>
+            <p className="font-mono-digital text-sm text-cyan-400/80">
+              {useGemini ? "Gemini 3.0 Pro AI" : "로컬 72점 요새 전략"}
             </p>
           </div>
           <div className="flex items-center gap-4">
@@ -245,7 +245,7 @@ export default function Home() {
             </div>
 
             {/* 중앙: AI 게임 보드 */}
-            <div className="col-span-4 flex flex-col">
+            <div className="col-span-5 flex flex-col">
               {isGameFinished && (
                 <div className={`mb-3 p-3 rounded-xl text-center border font-digital ${
                   aiScore >= 72
@@ -279,8 +279,8 @@ export default function Home() {
               />
             </div>
 
-            {/* 오른쪽: AI 결정 패널 (세로로 전체 차지, 더 넓게) */}
-            <div className="col-span-5 flex flex-col min-h-0">
+            {/* 오른쪽: AI 결정 패널 (세로로 전체 차지) */}
+            <div className="col-span-4 flex flex-col min-h-0">
               <AIDecisionPanel
                 decisions={aiDecisions}
                 currentScore={aiScore}
