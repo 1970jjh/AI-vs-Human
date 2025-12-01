@@ -180,7 +180,7 @@ export default function GameBoard({
         <div className="absolute inset-0 flex items-center justify-center pointer-events-none" style={{ marginLeft: '60px' }}>
           <div className="text-center">
             <div className="font-digital text-lg text-muted mb-1">{teamName}</div>
-            <div className="font-digital text-6xl font-black text-primary drop-shadow-lg">
+            <div className="font-digital text-6xl font-black text-yellow-400 drop-shadow-lg">
               {score}
             </div>
             <div className="font-digital text-base text-muted mt-1">POINTS</div>

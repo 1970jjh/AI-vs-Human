@@ -94,7 +94,7 @@ export default function NumberPanel({
       {currentNumber !== null && (
         <div className="mb-4 p-4 bg-primary/20 rounded-lg text-center animate-pulse">
           <span className="text-sm text-muted font-mono-digital">출제된 숫자</span>
-          <div className={`font-digital text-5xl font-bold ${currentNumber === "★" ? "text-purple-400" : "text-primary"}`}>
+          <div className={`font-digital text-5xl font-bold ${currentNumber === "★" ? "text-purple-400" : "text-white"}`}>
             {currentNumber}
           </div>
         </div>
