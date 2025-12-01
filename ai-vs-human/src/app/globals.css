@@ -29,9 +29,11 @@
   --muted: #6b7280;
   --text: #1f2937;
   --text-strong: #000000;
-  --cell-bg: #f3f4f6;
-  --cell-border: #9ca3af;
+  --cell-bg: #e5e7eb;
+  --cell-border: #6b7280;
   --cell-text: #374151;
+  --filled-cell-bg: #d1fae5;
+  --filled-cell-border: #059669;
 }
 
 body {

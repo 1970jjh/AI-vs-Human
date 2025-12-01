@@ -25,12 +25,12 @@ const BOARD_LAYOUT = {
 
 // 연속 오름차순 구간 색상 팔레트
 const RUN_COLORS = [
-  { bg: "bg-emerald-500/30", border: "border-emerald-500" },
-  { bg: "bg-blue-500/30", border: "border-blue-500" },
-  { bg: "bg-amber-500/30", border: "border-amber-500" },
-  { bg: "bg-rose-500/30", border: "border-rose-500" },
-  { bg: "bg-violet-500/30", border: "border-violet-500" },
-  { bg: "bg-cyan-500/30", border: "border-cyan-500" },
+  { bg: "bg-emerald-500/30", border: "border-emerald-500", lightBg: "bg-emerald-200", lightBorder: "border-emerald-600" },
+  { bg: "bg-blue-500/30", border: "border-blue-500", lightBg: "bg-blue-200", lightBorder: "border-blue-600" },
+  { bg: "bg-amber-500/30", border: "border-amber-500", lightBg: "bg-amber-200", lightBorder: "border-amber-600" },
+  { bg: "bg-rose-500/30", border: "border-rose-500", lightBg: "bg-rose-200", lightBorder: "border-rose-600" },
+  { bg: "bg-violet-500/30", border: "border-violet-500", lightBg: "bg-violet-200", lightBorder: "border-violet-600" },
+  { bg: "bg-cyan-500/30", border: "border-cyan-500", lightBg: "bg-cyan-200", lightBorder: "border-cyan-600" },
 ];
 
 // 연속 오름차순 구간 계산
@@ -76,7 +76,6 @@ function calculateRuns(board: (number | "★" | null)[]): { startIdx: number; en
 
   // 마지막 구간 처리
   if (runStart !== -1 && board.length - runStart >= 2) {
-    // 마지막까지 이어진 경우
     let endIdx = board.length - 1;
     while (endIdx >= runStart && board[endIdx] === null) {
       endIdx--;
@@ -139,8 +138,8 @@ export default function GameBoard({
             : isJoker
               ? "border-purple-500 bg-purple-500/20 text-purple-400"
               : hasRun && runColor
-                ? `${runColor.border} ${runColor.bg} text-[var(--cell-text)]`
-                : "border-accent/50 bg-accent/10 text-accent"
+                ? `${runColor.border} ${runColor.bg} light:${runColor.lightBorder} light:${runColor.lightBg}`
+                : "border-accent bg-accent/20"
           }
           ${isHighlight ? "ring-2 ring-accent animate-pulse-glow" : ""}
         `}
@@ -148,6 +147,8 @@ export default function GameBoard({
           borderColor: 'var(--cell-border)',
           backgroundColor: 'var(--cell-bg)',
           color: 'var(--cell-text)'
+        } : !isJoker ? {
+          color: 'var(--text-strong)'
         } : undefined}
       >
         <span className="font-digital" style={isEmpty ? { color: 'var(--cell-text)' } : undefined}>
@@ -173,37 +174,35 @@ export default function GameBoard({
         </div>
       )}
 
-      {/* 전체 레이아웃 */}
-      <div className="flex flex-col">
-        {/* 상단: 1-6칸 + 점수 표시 */}
-        <div className="flex items-start gap-4">
-          {/* 점수 표시 영역 */}
-          <div className="flex-1 flex flex-col items-center justify-center py-4">
-            <div className="text-center">
-              <div className="font-digital text-lg text-muted mb-1">{teamName}</div>
-              <div className="font-digital text-6xl font-black text-primary drop-shadow-lg">
-                {score}
-              </div>
-              <div className="font-digital text-base text-muted mt-1">POINTS</div>
+      {/* 전체 레이아웃 - 역ㄷ자 형태 */}
+      <div className="flex">
+        {/* 왼쪽: 점수 표시 영역 (역ㄷ자 가운데) */}
+        <div className="flex flex-col items-center justify-center pr-4" style={{ minWidth: '120px' }}>
+          <div className="text-center">
+            <div className="font-digital text-lg text-muted mb-1">{teamName}</div>
+            <div className="font-digital text-6xl font-black text-primary drop-shadow-lg">
+              {score}
             </div>
+            <div className="font-digital text-base text-muted mt-1">POINTS</div>
           </div>
+        </div>
 
+        {/* 오른쪽: 보드 영역 */}
+        <div className="flex flex-col">
           {/* 상단 가로줄 (1-6) */}
           <div className="flex gap-1">
             {BOARD_LAYOUT.top.map((idx) => renderCell(idx))}
           </div>
-        </div>
 
-        {/* 중간: 오른쪽 세로줄 (7-14) */}
-        <div className="flex justify-end">
-          <div className="flex flex-col gap-1 mt-1">
+          {/* 오른쪽 세로줄 (7-14) - 6번 칸 바로 아래에 붙임 */}
+          <div className="flex flex-col gap-1 mt-1 self-end">
             {BOARD_LAYOUT.right.map((idx) => renderCell(idx))}
           </div>
-        </div>
 
-        {/* 하단 가로줄 (20-15) */}
-        <div className="flex gap-1 mt-1 justify-end">
-          {BOARD_LAYOUT.bottom.map((idx) => renderCell(idx))}
+          {/* 하단 가로줄 (20-15) */}
+          <div className="flex gap-1 mt-1">
+            {BOARD_LAYOUT.bottom.map((idx) => renderCell(idx))}
+          </div>
         </div>
       </div>
     </div>
