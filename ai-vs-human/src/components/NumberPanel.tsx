@@ -23,15 +23,12 @@ function getCoverLabel(index: number): string {
 export default function NumberPanel({
   usedNumbers,
   currentNumber,
-  onSelectNumber,
-  onRandomSelect,
   disabled = false,
   shuffledDeck = [],
   revealedCovers = [],
   onRevealCover,
 }: NumberPanelProps) {
   const totalUsed = usedNumbers.length;
-  const totalCards = 40;
 
   // 덮개 클릭 핸들러
   const handleCoverClick = (index: number) => {
@@ -90,7 +87,7 @@ export default function NumberPanel({
       {currentNumber !== null && (
         <div className="mb-2 p-2 bg-primary/20 rounded-lg text-center animate-pulse">
           <span className="text-xs text-muted font-mono-digital">출제된 숫자</span>
-          <div className={`font-digital text-3xl font-bold ${currentNumber === "★" ? "text-purple-400" : "text-white"}`}>
+          <div className={`font-digital text-3xl font-bold ${currentNumber === "★" ? "text-purple-400" : ""}`} style={{ color: currentNumber === "★" ? undefined : "var(--text)" }}>
             {currentNumber}
           </div>
         </div>
@@ -114,25 +111,27 @@ export default function NumberPanel({
                 transition-all duration-300 transform
                 ${isRevealed
                   ? isJoker
-                    ? "bg-purple-500/40 text-purple-300 border border-purple-400/50"
-                    : "bg-emerald-500/30 text-emerald-300 border border-emerald-400/50"
-                  : `backdrop-blur-md bg-white/10 border border-white/20 text-white/90
-                     hover:bg-white/20 hover:border-white/40 hover:scale-105
-                     hover:shadow-lg hover:shadow-white/10 cursor-pointer
-                     active:scale-95`
+                    ? "bg-gradient-to-br from-purple-500/50 to-pink-500/50 text-purple-100 border border-purple-400/60 shadow-inner"
+                    : "bg-gradient-to-br from-emerald-500/40 to-teal-500/40 text-emerald-100 border border-emerald-400/60 shadow-inner"
+                  : `bg-gradient-to-br from-indigo-500/70 via-purple-500/60 to-pink-500/70
+                     backdrop-blur-sm border border-indigo-300/40
+                     shadow-lg shadow-purple-500/20
+                     hover:from-indigo-400/80 hover:via-purple-400/70 hover:to-pink-400/80
+                     hover:scale-105 hover:shadow-xl hover:shadow-purple-500/30
+                     hover:border-white/50
+                     active:scale-95 cursor-pointer`
                 }
               `}
               style={{
                 minHeight: "36px",
-                fontSize: isRevealed ? "14px" : "11px"
               }}
             >
               {isRevealed ? (
-                <span className={`font-bold ${isJoker ? "text-purple-300" : "text-emerald-300"}`}>
+                <span className={`font-bold text-sm ${isJoker ? "text-white" : "text-white"}`}>
                   {card}
                 </span>
               ) : (
-                <span className="font-mono-digital font-semibold tracking-tight">
+                <span className="font-mono-digital font-bold text-xs text-white drop-shadow-md">
                   {coverLabel}
                 </span>
               )}
@@ -145,15 +144,15 @@ export default function NumberPanel({
       <div className="mt-2 pt-2 border-t text-xs text-muted font-mono-digital" style={{ borderColor: "var(--border)" }}>
         <div className="flex items-center justify-center gap-3">
           <div className="flex items-center gap-1">
-            <div className="w-2 h-2 rounded backdrop-blur-md bg-white/20 border border-white/30" />
+            <div className="w-3 h-3 rounded bg-gradient-to-br from-indigo-500/70 to-pink-500/70 border border-indigo-300/40" />
             <span>미공개</span>
           </div>
           <div className="flex items-center gap-1">
-            <div className="w-2 h-2 bg-emerald-500/50 rounded border border-emerald-400/50" />
+            <div className="w-3 h-3 rounded bg-gradient-to-br from-emerald-500/50 to-teal-500/50 border border-emerald-400/50" />
             <span>공개</span>
           </div>
           <div className="flex items-center gap-1">
-            <div className="w-2 h-2 bg-purple-500/50 rounded border border-purple-400/50" />
+            <div className="w-3 h-3 rounded bg-gradient-to-br from-purple-500/50 to-pink-500/50 border border-purple-400/50" />
             <span>조커</span>
           </div>
         </div>
