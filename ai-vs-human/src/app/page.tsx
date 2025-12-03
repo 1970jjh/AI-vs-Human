@@ -25,11 +25,10 @@ interface AIDecision {
 
 const ADMIN_PASSWORD = "6749467";
 
-// 게임용 20장 덱 생성 (전체 40장에서 랜덤 20장 선택)
+// 게임용 40장 덱 생성 (전체 40장을 셔플)
 function createGameDeck(): (number | "★")[] {
   const fullDeck = createDeck(); // 40장
-  const shuffled = shuffleDeck(fullDeck);
-  return shuffled.slice(0, 20); // 20장만 선택
+  return shuffleDeck(fullDeck); // 전체 셔플
 }
 
 export default function Home() {
@@ -56,9 +55,9 @@ export default function Home() {
   const prevScoreRef = useRef(0);
   const hasPlayedFanfareRef = useRef(false);
 
-  // 덮개 시스템 상태
+  // 덮개 시스템 상태 (40개 카드)
   const [shuffledDeck, setShuffledDeck] = useState<(number | "★")[]>([]);
-  const [revealedCovers, setRevealedCovers] = useState<boolean[]>(Array(20).fill(false));
+  const [revealedCovers, setRevealedCovers] = useState<boolean[]>(Array(40).fill(false));
 
   // 초기 덱 생성 (컴포넌트 마운트 시)
   useEffect(() => {
@@ -230,7 +229,7 @@ export default function Home() {
     hasPlayedFanfareRef.current = false;
     // 덮개 시스템 리셋
     setShuffledDeck(createGameDeck());
-    setRevealedCovers(Array(20).fill(false));
+    setRevealedCovers(Array(40).fill(false));
   };
 
   const isGameFinished = turn >= BOARD_SIZE;
