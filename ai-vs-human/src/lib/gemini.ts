@@ -63,76 +63,135 @@ export async function getAIDecision(
   const conservativeIndex = Math.round(4 + 13 * ratio); // 4~17번 칸 범위 (보수적)
   const suggestedIndex = Math.min(17, Math.max(4, conservativeIndex));
 
-  const prompt = `당신은 "스트림스" 보드게임의 최고 전문가 AI입니다. **안정적이고 보수적인 플레이**를 통해 높은 점수를 획득하세요.
+  // ★★★ 핵심 분석: 간격 분석 (Gap Analysis) ★★★
+  // 배치된 숫자들과 현재 숫자 사이에 들어올 수 있는 남은 숫자 계산
+  const placedNumbers: { pos: number; value: number }[] = [];
+  for (let i = 0; i < board.length; i++) {
+    if (board[i] !== null && board[i] !== "★") {
+      placedNumbers.push({ pos: i + 1, value: board[i] as number });
+    }
+  }
+  placedNumbers.sort((a, b) => a.pos - b.pos);
 
-## *** 절대 금지 사항 ***
-- 어떤 경우에도 인접한 숫자보다 작은 숫자를 그 뒤에 배치하면 안 됩니다
-- 예: 8번 칸에 15가 있으면, 9번 칸 이후에는 15 이상의 숫자만 배치 가능
-- 모든 배치는 엄격한 오름차순(≤)을 유지해야 합니다 (같은 숫자는 허용)
+  // 현재 숫자가 숫자인 경우, 인접 배치 시 간격 분석
+  let gapAnalysis = "";
+  if (typeof currentNumber === "number" && placedNumbers.length > 0) {
+    // 현재 숫자보다 작은 배치된 숫자들 중 가장 큰 것
+    const smallerPlaced = placedNumbers.filter(p => p.value <= currentNumber);
+    // 현재 숫자보다 큰 배치된 숫자들 중 가장 작은 것
+    const largerPlaced = placedNumbers.filter(p => p.value >= currentNumber);
 
-## 적응형 목표 전략 (매우 중요!)
-- **1차 목표**: 16칸 연속 오름차순 (72점) - 이상적인 최고점
-- **2차 목표**: 15칸 연속 오름차순 (62점) - 안정적인 고득점
-- **3차 목표**: 14칸 연속 오름차순 (53점) - 현실적인 목표
+    if (smallerPlaced.length > 0) {
+      const nearest = smallerPlaced[smallerPlaced.length - 1];
+      // 이 숫자와 현재 숫자 사이에 들어올 수 있는 남은 숫자 개수
+      const numbersBetween = numericRemaining.filter(
+        n => n > nearest.value && n < currentNumber
+      ).length;
+      // 같은 숫자(11-19)가 남아있다면 추가
+      const sameNumberRemaining = numericRemaining.filter(n => n === currentNumber).length;
+      const totalNeeded = numbersBetween + (currentNumber >= 11 && currentNumber <= 19 ? sameNumberRemaining : 0);
 
-### 목표 조정 기준
-- 게임 초반(1~7턴): 16칸 목표 유지
-- 게임 중반(8~14턴): 보드 상태를 분석하여 16칸이 어려워 보이면 15칸으로 조정
-- 게임 후반(15~20턴): 현재 연속 구간을 최대한 보존하는 것이 우선
+      if (totalNeeded > 0) {
+        gapAnalysis += `\n⚠️ 주의: ${nearest.pos}번 칸의 ${nearest.value}와 현재 숫자 ${currentNumber} 사이에 배치 가능한 남은 숫자가 ${totalNeeded}개 있습니다!`;
+        gapAnalysis += `\n   → ${nearest.value}와 ${currentNumber} 사이 숫자들: ${numericRemaining.filter(n => n > nearest.value && n <= currentNumber).join(', ')}`;
+        gapAnalysis += `\n   → 따라서 ${nearest.pos}번 칸 바로 옆이 아닌, 최소 ${totalNeeded + 1}칸 이상 떨어진 위치에 배치해야 합니다!`;
+      }
+    }
+
+    if (largerPlaced.length > 0) {
+      const nearest = largerPlaced[0];
+      const numbersBetween = numericRemaining.filter(
+        n => n > currentNumber && n < nearest.value
+      ).length;
+      const sameNumberRemaining = numericRemaining.filter(n => n === currentNumber).length;
+      const totalNeeded = numbersBetween + (currentNumber >= 11 && currentNumber <= 19 ? sameNumberRemaining : 0);
+
+      if (totalNeeded > 0) {
+        gapAnalysis += `\n⚠️ 주의: 현재 숫자 ${currentNumber}와 ${nearest.pos}번 칸의 ${nearest.value} 사이에 배치 가능한 남은 숫자가 ${totalNeeded}개 있습니다!`;
+        gapAnalysis += `\n   → ${currentNumber}와 ${nearest.value} 사이 숫자들: ${numericRemaining.filter(n => n >= currentNumber && n < nearest.value).join(', ')}`;
+        gapAnalysis += `\n   → 따라서 ${nearest.pos}번 칸 바로 옆이 아닌, 최소 ${totalNeeded + 1}칸 이상 떨어진 위치에 배치해야 합니다!`;
+      }
+    }
+  }
+
+  // 남은 숫자 상세 정보
+  const remainingInfo = numericRemaining.sort((a, b) => a - b).join(', ');
+  const jokerRemaining = remainingNumbers.filter(n => n === "★").length;
+
+  const prompt = `당신은 "스트림스" 보드게임의 최고 전문가 AI입니다. **확률 기반 간격 분석**으로 최적의 배치를 결정하세요.
+
+## ★★★ 가장 중요한 원칙: 간격 분석 (Gap Analysis) ★★★
+**배치된 숫자와 현재 숫자 사이에 들어올 수 있는 남은 숫자 개수만큼 빈칸을 확보해야 합니다!**
+
+예시: 5번 칸에 5가 있고, 현재 숫자 11을 배치할 때
+- 5와 11 사이에 올 수 있는 숫자: 6, 7, 8, 9, 10, (11 한장 더) = 최대 6개
+- 따라서 5번 칸 바로 옆(6번 칸)이 아닌, 최소 6~7칸 이상 떨어진 위치(11번~12번 칸)에 배치해야 함
+- 6번 칸에 11을 놓으면 중간 숫자들이 들어갈 공간이 없어 연속이 끊김!
+
+## 현재 간격 분석 결과
+${gapAnalysis || "현재 배치된 숫자가 없거나 간격 문제가 없습니다."}
+
+## 남은 숫자 현황
+- 남은 숫자들: ${remainingInfo || "없음"}${jokerRemaining > 0 ? `, 조커 ${jokerRemaining}개` : ""}
+- 현재 숫자(${currentNumber})보다 작은 숫자: ${lessCount}개
+- 현재 숫자(${currentNumber})보다 큰 숫자: ${moreCount}개
+
+## 절대 금지 사항
+- 인접한 숫자보다 작은 숫자를 그 뒤에 배치 금지
+- 모든 배치는 엄격한 오름차순(≤) 유지 (같은 숫자는 허용)
+- **간격 분석을 무시한 인접 배치 절대 금지!**
+
+## 적응형 목표 전략
+- **1차 목표**: 16칸 연속 오름차순 (72점)
+- **2차 목표**: 15칸 연속 오름차순 (62점)
+- **3차 목표**: 14칸 연속 오름차순 (53점)
 
 ## 구역 정의
-- **메인 존**: 3번~18번 칸 (총 16칸) - 여기서 최대 연속 오름차순을 만들어야 함
-- **버림 존**: 1,2번 칸 (헤드 버퍼) + 19,20번 칸 (테일 버퍼) - 메인 존에 못 넣는 숫자 버리는 곳
+- **메인 존**: 3번~18번 칸 (총 16칸)
+- **버림 존**: 1,2번 칸 + 19,20번 칸
 
-## 앵커 배치 (절대 우선순위)
-- 숫자 1: 반드시 3번 칸에 배치 (메인 존 시작)
-- 숫자 30: 반드시 18번 칸에 배치 (메인 존 끝)
+## 앵커 배치
+- 숫자 1 → 3번 칸
+- 숫자 30 → 18번 칸
 
-## 보수적 배치 공식 (1, 30 외의 숫자)
-현재 숫자 ${currentNumber}에 대한 계산 결과:
-- 남은 숫자 중 ${currentNumber}보다 작은 개수: ${lessCount}개
-- 남은 숫자 중 ${currentNumber}보다 큰 개수: ${moreCount}개
-- 비율: ${(ratio * 100).toFixed(1)}%
-- **권장 위치: ${suggestedIndex}번 칸** (4~17번 범위의 보수적 배치)
+## 확률 기반 권장 위치
+- 현재 숫자: ${currentNumber}
+- 비율: ${(ratio * 100).toFixed(1)}% (작은 숫자 비율)
+- **기본 권장 위치: ${suggestedIndex}번 칸**
+- 단, 간격 분석 결과에 따라 조정 필요!
 
-### 보수적 배치 원칙
-- 중간값 숫자(11~20)는 **권장 위치보다 1~2칸 앞쪽(왼쪽)**에 배치하여 오른쪽 여유 공간 확보
-- 예: 숫자 19의 권장 위치가 15번이면 → 13번 또는 14번 칸에 배치 권장
-- 이유: 오른쪽에 더 큰 숫자들이 들어올 공간을 남겨두어 연속 구간 단절 방지
+## 같은 숫자(11~19) 처리
+- 같은 숫자도 연속 오름차순으로 인정 (예: 11, 11, 12 = 3칸 연속)
+- **두 번째 같은 숫자**: 첫 번째와 인접 배치 권장 (단, 다른 숫자가 사이에 없을 때만!)
 
 ## 조커(★) 전략
-- 조커는 '★' 그대로 배치 (숫자로 변환하지 않음)
-- 조커는 어떤 숫자와도 오름차순을 만족
+- 조커는 어떤 숫자와도 오름차순 만족
 - 끊어진 연결을 이어줄 수 있는 위치에 배치
-
-## 같은 숫자 처리 (매우 중요!)
-- 같은 숫자도 연속 오름차순으로 인정됩니다 (예: 11, 11, 12 = 3칸 연속)
-- **11~19 숫자가 두 번째로 나오면**: 이미 배치된 같은 숫자의 바로 앞 또는 바로 뒤에 인접 배치해야 합니다!
-- 앞 칸과 뒤 칸 중 어느 쪽에 배치하면 더 긴 연속 오름차순을 만들 수 있는지 판단하세요
 
 ## 현재 보드 상태
 - 턴: ${turn}/20
 - 현재 배치할 숫자: ${currentNumber}
 - 보드: ${boardVisualization}
-- 메인 존(3~18번) 빈칸: ${mainZoneEmpty.join(", ") || "없음"}
+- 메인 존 빈칸: ${mainZoneEmpty.join(", ") || "없음"}
 - 메인 존 채워진 칸: ${mainZoneFilled.map(f => `${f.pos}번=${f.value}`).join(", ") || "없음"}
 - 모든 빈칸: ${emptySlots.join(", ")}
 
-## 의사결정 알고리즘
-1. 숫자가 1이면 → 3번 칸
-2. 숫자가 30이면 → 18번 칸
-3. 11~19 숫자가 이미 보드에 있으면 → 인접 배치 우선
-4. 조커(★)면 → 가장 효과적인 연결 위치
-5. 그 외: 권장 위치(${suggestedIndex}번) 또는 **1~2칸 앞쪽** 빈칸에 배치
-   - 반드시 오름차순 유지 (왼쪽 숫자 ≤ 현재 ≤ 오른쪽 숫자)
-   - 오른쪽 여유 공간을 확보하는 보수적 선택 권장
+## 의사결정 우선순위
+1. **간격 분석 최우선**: 배치된 숫자와 현재 숫자 사이에 들어올 남은 숫자 개수 확인
+2. 숫자 1이면 → 3번 칸
+3. 숫자 30이면 → 18번 칸
+4. 11~19 두 번째 숫자: 첫 번째와 인접 (단, 사이에 올 숫자가 없을 때만!)
+5. 조커(★) → 연결 효과 최대화 위치
+6. 그 외: 권장 위치 기준으로 간격을 충분히 확보한 위치에 배치
+
+**중요**: 배치 시 왼쪽 숫자와의 간격, 오른쪽 숫자와의 간격 모두 고려하여 남은 숫자들이 들어갈 공간을 확보하세요!
 
 다음 JSON 형식으로만 응답하세요:
 {
   "index": <1-20 사이의 칸 번호>,
-  "reason": "<배치 이유를 한국어로 2-3문장으로 설명>",
+  "reason": "<간격 분석을 포함한 배치 이유를 한국어로 2-3문장으로 설명>",
   "confidence": <0-100 사이의 신뢰도>,
-  "strategy": "<ANCHOR_1 | ANCHOR_30 | PROBABILITY_MAIN | ADJACENT_SAME | JOKER_BRIDGE | BUFFER_DISCARD | ADAPTIVE_GOAL>"
+  "strategy": "<ANCHOR_1 | ANCHOR_30 | GAP_ANALYSIS | PROBABILITY_MAIN | ADJACENT_SAME | JOKER_BRIDGE | BUFFER_DISCARD>"
 }`;
 
   try {
