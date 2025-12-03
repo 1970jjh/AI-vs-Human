@@ -39,10 +39,10 @@ export async function getAIDecision(
     .map((cell, idx) => (cell === null ? idx + 1 : null))
     .filter((idx) => idx !== null);
 
-  // 메인 존 빈칸 분석
+  // 메인 존 빈칸 분석 (3번~17번 칸 = 15칸이 메인 존)
   const mainZoneEmpty = [];
   const mainZoneFilled = [];
-  for (let i = 2; i <= 17; i++) {
+  for (let i = 2; i <= 16; i++) { // 3번~17번 칸 (인덱스 2~16)
     if (board[i] === null) {
       mainZoneEmpty.push(i + 1);
     } else {
@@ -58,10 +58,11 @@ export async function getAIDecision(
   const total = lessCount + moreCount;
   const ratio = total > 0 ? lessCount / total : 0.5;
 
-  // 보수적 배치 공식: 중앙(10-11번)을 기준으로 더 좁은 범위에서 배치
-  // 기존: 3~18 (15칸 범위) → 개선: 4~17 (13칸 범위)로 더 안전하게
-  const conservativeIndex = Math.round(4 + 13 * ratio); // 4~17번 칸 범위 (보수적)
-  const suggestedIndex = Math.min(17, Math.max(4, conservativeIndex));
+  // ★★★ 제1원칙: 메인 존 3~17번 칸 (15칸) 기반 배치 공식 ★★★
+  // 앵커: 1,2 → 3~4번 칸 / 29,30 → 16~17번 칸
+  // 중간 숫자는 5~15번 칸에 확률적으로 배치 (11칸 범위)
+  const conservativeIndex = Math.round(5 + 10 * ratio); // 5~15번 칸 범위 (중간 숫자용)
+  const suggestedIndex = Math.min(15, Math.max(5, conservativeIndex));
 
   // ★★★ 핵심 분석: 확률 기반 간격 분석 (Probability-based Gap Analysis) ★★★
   const placedNumbers: { pos: number; value: number }[] = [];
@@ -192,7 +193,7 @@ export async function getAIDecision(
         sequenceBreakAnalysis += `\n   • ${nextSmaller.pos}번 칸에 ${nextSmaller.value}(작은값)가 이미 오른쪽에 있음`;
         sequenceBreakAnalysis += `\n   • ${nextLarger.pos}번 칸에 ${nextLarger.value}(큰값)가 이미 왼쪽에 있음`;
         sequenceBreakAnalysis += `\n   → 메인 시퀀스에 끼울 수 없는 "고아 숫자"입니다!`;
-        sequenceBreakAnalysis += `\n   → 버퍼존(1~3번 또는 18~20번 칸)에 배치하세요!`;
+        sequenceBreakAnalysis += `\n   → 버퍼존(1~2번 또는 18~20번 칸)에 배치하세요!`;
         recommendedBufferZone = currentNumber < 15 ? "left" : "right";
       } else if (availableSlotsBetween.length === 0 && nextLarger.pos - nextSmaller.pos === 1) {
         // 바로 붙어있고 사이에 빈칸이 없음
@@ -238,20 +239,37 @@ export async function getAIDecision(
         sequenceBreakAnalysis = `\n🚨 [시퀀스 파괴 감지] 현재 숫자 ${currentNumber}을 ${nextLarger.value}(${nextLarger.pos}번) 앞에 배치할 수 없습니다!`;
         sequenceBreakAnalysis += `\n   • ${nextLarger.pos}번 칸 앞의 모든 빈칸에는 이미 ${currentNumber}보다 큰 숫자가 앞에 있음`;
         sequenceBreakAnalysis += `\n   → 메인 시퀀스에 끼울 수 없는 "고아 숫자"입니다!`;
-        sequenceBreakAnalysis += `\n   → 버퍼존(1~3번 또는 18~20번 칸)에 배치하세요!`;
+        sequenceBreakAnalysis += `\n   → 버퍼존(1~2번 또는 18~20번 칸)에 배치하세요!`;
         recommendedBufferZone = "left";
       }
     }
   }
 
-  // 버퍼존 상태 확인
-  const leftBuffer = [1, 2, 3].filter(i => board[i - 1] === null);
-  const rightBuffer = [18, 19, 20].filter(i => board[i - 1] === null);
+  // 버퍼존 상태 확인 (메인 존 3~17번 외부)
+  const leftBuffer = [1, 2].filter(i => board[i - 1] === null); // 왼쪽 버퍼존
+  const rightBuffer = [18, 19, 20].filter(i => board[i - 1] === null); // 오른쪽 버퍼존
 
-  const prompt = `당신은 "스트림스" 보드게임의 최고 전문가 AI입니다. **확률 기반 간격 분석**과 **시퀀스 보존 전략**으로 최적의 배치를 결정하세요.
+  const prompt = `당신은 "스트림스" 보드게임의 최고 전문가 AI입니다.
 
-## ★★★ 핵심 원칙: 확률 기반 간격 분석 ★★★
-단순히 "사이에 올 수 있는 숫자 개수"가 아니라, **실제로 뽑힐 확률**을 계산하여 간격을 결정합니다.
+## ★★★★★ 제1원칙 (최우선 전략) ★★★★★
+**연속 15칸 오름차순 달성이 최종 목표입니다!**
+
+### 앵커 배치 규칙 (가장 중요!)
+- **숫자 1 또는 2** → **3번 또는 4번 칸**에 배치 (왼쪽 앵커)
+- **숫자 29 또는 30** → **16번 또는 17번 칸**에 배치 (오른쪽 앵커)
+- 이 앵커들이 메인 존(3~17번)의 양 끝을 잡아줍니다!
+
+### 구역 정의
+- **메인 존**: 3번~17번 칸 (15칸) ← 연속 오름차순 목표!
+- **버퍼 존(버림 존)**: 1번, 2번 + 18번, 19번, 20번 칸
+
+### 목표 전략
+- **1차 목표**: 연속 15칸 오름차순 (3~17번 칸)
+- **2차 목표**: 연속 14칸 (15칸이 어려울 때)
+- **3차 목표**: 연속 13칸
+
+## 확률 기반 간격 분석
+중간 숫자(3~28)는 확률적으로 배치합니다.
 
 ### 확률 계산 공식
 - 기대 뽑힘 개수 = (사이에 올 수 있는 숫자 개수) × (남은 뽑기 횟수 / 남은 총 카드 수)
@@ -259,35 +277,26 @@ export async function getAIDecision(
 - 기대값 0.5~1.5: 1개 정도 뽑힐 수 있음 → 1~2칸 간격 권장
 - 기대값 > 1.5: 여러 개 뽑힐 가능성 높음 → 기대값만큼 간격 필요
 
-### 예시
-- 16번 칸에 27이 있고, 현재 숫자 24를 배치할 때
-- 24와 27 사이: 25, 26 = 2개
-- 남은 카드 38장, 남은 뽑기 18회
-- 기대값 = 2 × (18/38) = 0.95개
-- 결론: 1개 정도만 뽑힐 확률 → 24는 15번 칸(1칸 앞)에 배치해도 안전!
-
 ## 현재 확률 기반 간격 분석 결과
 ${gapAnalysis || "현재 배치된 숫자가 없거나 간격 문제가 없습니다."}
 
-## ★★★ 최우선 원칙: 시퀀스 보존 전략 ★★★
+## 고아 숫자 판정 및 버퍼존 전략
 **메인 시퀀스를 깨는 것은 최악의 선택입니다!**
 
-### 고아 숫자(Orphan Number) 판정
-- 현재 숫자가 이미 배치된 숫자들 사이에 들어갈 수 없을 때 "고아 숫자"로 판정
+### 고아 숫자(Orphan Number)란?
+- 현재 숫자가 이미 배치된 숫자들 사이에 들어갈 수 없을 때
 - 예: 14가 11번칸에, 16이 13번칸에 있는데 13이 뽑힘
-  - 13은 14보다 작으므로 14 앞에 와야 함
-  - 하지만 14 앞(10번칸 이하)에 배치하면 기존 시퀀스(8→10→11→14→16)가 깨짐!
-  - 이런 경우 13은 "고아 숫자" → 버퍼존으로 보내야 함
+  - 13은 14보다 작으므로 14 앞에 와야 하지만, 이미 시퀀스가 형성됨
+  - 이런 경우 13은 "고아 숫자" → 버퍼존에 버려야 함!
 
-### 버퍼존 전략
-- **왼쪽 버퍼존**: 1번, 2번, 3번 칸 (작은 고아 숫자용)
+### 버퍼존 사용
+- **왼쪽 버퍼존**: 1번, 2번 칸 (작은 고아 숫자용)
 - **오른쪽 버퍼존**: 18번, 19번, 20번 칸 (큰 고아 숫자용)
-- 고아 숫자는 메인 시퀀스를 깨지 않도록 버퍼존에 배치!
 - 버퍼존 빈칸: 왼쪽 [${leftBuffer.join(', ') || '없음'}], 오른쪽 [${rightBuffer.join(', ') || '없음'}]
 
 ### 현재 시퀀스 파괴 분석
 ${sequenceBreakAnalysis || "✅ 현재 숫자는 메인 시퀀스에 안전하게 배치 가능합니다."}
-${isOrphanNumber ? `\n⚠️ **고아 숫자 감지!** → ${recommendedBufferZone === "left" ? "왼쪽 버퍼존(1~3번)" : "오른쪽 버퍼존(18~20번)"}에 배치하세요!` : ""}
+${isOrphanNumber ? `\n⚠️ **고아 숫자 감지!** → ${recommendedBufferZone === "left" ? "왼쪽 버퍼존(1~2번)" : "오른쪽 버퍼존(18~20번)"}에 배치하세요!` : ""}
 
 ## 현재 게임 상황
 - **턴**: ${turn}/20 (남은 뽑기: ${remainingDraws}회)
@@ -300,52 +309,38 @@ ${isOrphanNumber ? `\n⚠️ **고아 숫자 감지!** → ${recommendedBufferZo
 - 오름차순 위반 배치 금지 (왼쪽 숫자 ≤ 현재 ≤ 오른쪽 숫자)
 - 같은 숫자는 허용 (예: 11 ≤ 11 ≤ 12)
 
-## 목표 전략
-- 1차: 16칸 연속 (72점) / 2차: 15칸 (62점) / 3차: 14칸 (53점)
-
-## 구역 정의
-- **메인 존**: 3번~18번 칸 (16칸)
-- **버림 존**: 1,2번 + 19,20번 칸
-
-## 앵커 배치
-- 숫자 1 → 3번 칸 / 숫자 30 → 18번 칸
-
 ## 확률 기반 권장 위치
 - 기본 권장: ${suggestedIndex}번 칸 (비율 ${(ratio * 100).toFixed(1)}%)
 - **확률 분석에 따른 권장 간격: ${recommendedGap}칸**
 
-## 같은 숫자(11~19) 처리
-- 두 번째 같은 숫자는 첫 번째와 인접 배치 (사이에 올 숫자의 기대값이 낮을 때)
-
-## 조커(★) 전략
-- 끊어진 연결을 이어줄 수 있는 위치에 배치
-
 ## 현재 보드 상태
 - 보드: ${boardVisualization}
-- 메인 존 빈칸: ${mainZoneEmpty.join(", ") || "없음"}
+- 메인 존(3~17번) 빈칸: ${mainZoneEmpty.join(", ") || "없음"}
 - 메인 존 채워진 칸: ${mainZoneFilled.map(f => `${f.pos}번=${f.value}`).join(", ") || "없음"}
 
 ## 의사결정 우선순위 (중요도 순)
-1. **🚨 고아 숫자 판정**: 메인 시퀀스에 끼울 수 없으면 즉시 버퍼존으로! (최우선)
-2. **시퀀스 보존**: 기존 오름차순 시퀀스를 절대 깨지 않는 위치 선택
-3. 숫자 1 → 3번 칸 / 숫자 30 → 18번 칸 (앵커 배치)
+1. **🎯 앵커 배치** (최우선!): 1,2 → 3~4번 칸 / 29,30 → 16~17번 칸
+2. **🚨 고아 숫자 판정**: 메인 시퀀스에 끼울 수 없으면 즉시 버퍼존으로!
+3. **시퀀스 보존**: 기존 오름차순 시퀀스를 절대 깨지 않는 위치 선택
 4. **확률 기반 간격 분석**: 기대값에 따라 적절한 간격 결정
 5. 같은 숫자(11~19): 기대값이 낮으면 인접 배치
-6. 조커 → 연결 최대화 위치
-7. 그 외: 확률 분석 결과에 따른 최적 위치
+6. 조커(★) → 끊어진 연결을 이어줄 수 있는 위치
 
 다음 JSON 형식으로만 응답하세요:
 {
   "index": <1-20 사이의 칸 번호>,
-  "reason": "<확률 분석을 포함한 배치 이유를 한국어로 2-3문장으로 설명>",
+  "reason": "<배치 이유를 한국어로 2-3문장으로 설명>",
   "confidence": <0-100 사이의 신뢰도>,
-  "strategy": "<ORPHAN_BUFFER | ANCHOR_1 | ANCHOR_30 | PROBABILITY_GAP | PROBABILITY_MAIN | ADJACENT_SAME | JOKER_BRIDGE | BUFFER_DISCARD>"
+  "strategy": "<ANCHOR_LOW | ANCHOR_HIGH | ORPHAN_BUFFER | PROBABILITY_GAP | ADJACENT_SAME | JOKER_BRIDGE | BUFFER_DISCARD>"
 }
 
 **전략 설명:**
-- ORPHAN_BUFFER: 고아 숫자를 버퍼존(1~3번 또는 18~20번)에 배치하여 메인 시퀀스 보존
-- ANCHOR_1/30: 앵커 숫자(1 또는 30) 배치
-- PROBABILITY_GAP: 확률 기반 간격 분석에 따른 배치
+- ANCHOR_LOW: 앵커 숫자(1, 2)를 3~4번 칸에 배치
+- ANCHOR_HIGH: 앵커 숫자(29, 30)를 16~17번 칸에 배치
+- ORPHAN_BUFFER: 고아 숫자를 버퍼존에 배치하여 메인 시퀀스 보존
+- PROBABILITY_GAP: 확률 기반 간격 분석에 따른 중간 숫자 배치
+- ADJACENT_SAME: 같은 숫자(11~19) 인접 배치
+- JOKER_BRIDGE: 조커로 끊어진 시퀀스 연결
 - BUFFER_DISCARD: 메인 존에 맞지 않아 버퍼존에 버리는 배치`;
 
   try {
