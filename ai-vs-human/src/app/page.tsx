@@ -237,7 +237,7 @@ export default function Home() {
                 AI vs Human
               </h1>
               <p className="font-mono-digital text-sm text-cyan-400/80 mt-1">
-                Gemini 3.0 Pro AI
+                Gemini 2.0 Flash AI
               </p>
             </div>
             <p className="font-mono-digital text-xs text-muted mt-4">
@@ -290,7 +290,7 @@ export default function Home() {
           <div className="px-4 py-2 rounded-xl bg-gradient-to-r from-purple-500/20 via-blue-500/20 to-cyan-500/20 backdrop-blur-sm border border-purple-500/30 shadow-lg shadow-purple-500/10">
             <h1 className="font-digital text-3xl font-bold bg-gradient-to-r from-purple-400 via-pink-400 to-cyan-400 bg-clip-text text-transparent drop-shadow-lg">AI vs Human</h1>
             <p className="font-mono-digital text-sm text-cyan-400/80">
-              {useGemini ? "Gemini 3.0 Pro AI" : "로컬 72점 요새 전략"}
+              {useGemini ? "Gemini 2.0 Flash AI" : "로컬 72점 요새 전략"}
             </p>
           </div>
 
