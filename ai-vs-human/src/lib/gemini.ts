@@ -160,7 +160,95 @@ export async function getAIDecision(
   const remainingInfo = numericRemaining.sort((a, b) => a - b).join(', ');
   const jokerRemaining = remainingNumbers.filter(n => n === "★").length;
 
-  const prompt = `당신은 "스트림스" 보드게임의 최고 전문가 AI입니다. **확률 기반 간격 분석**으로 최적의 배치를 결정하세요.
+  // ★★★ 핵심 분석: 시퀀스 파괴 감지 및 버퍼존 전략 ★★★
+  let sequenceBreakAnalysis = "";
+  let isOrphanNumber = false; // 메인 시퀀스에 끼울 수 없는 "고아 숫자"인지
+  let recommendedBufferZone: "left" | "right" | null = null;
+
+  if (typeof currentNumber === "number" && placedNumbers.length > 0) {
+    // 현재 숫자보다 큰 숫자가 배치된 위치들
+    const largerOnBoard = placedNumbers.filter(p => p.value > currentNumber);
+    // 현재 숫자보다 작은 숫자가 배치된 위치들
+    const smallerOnBoard = placedNumbers.filter(p => p.value < currentNumber);
+
+    if (largerOnBoard.length > 0 && smallerOnBoard.length > 0) {
+      // 현재 숫자보다 큰 것 중 가장 작은 값 (바로 위 숫자)
+      const nextLarger = largerOnBoard.reduce((min, p) => p.value < min.value ? p : min);
+      // 현재 숫자보다 작은 것 중 가장 큰 값 (바로 아래 숫자)
+      const nextSmaller = smallerOnBoard.reduce((max, p) => p.value > max.value ? p : max);
+
+      // 정상적인 경우: 작은 숫자 위치 < 큰 숫자 위치
+      // 문제 상황: 작은 숫자 위치 > 큰 숫자 위치 (이미 역전됨)
+      // 또는: 작은 숫자 위치와 큰 숫자 위치 사이에 빈칸이 없음
+
+      const availableSlotsBetween = emptySlots.filter(
+        slot => slot > nextSmaller.pos && slot < nextLarger.pos
+      );
+
+      if (nextSmaller.pos > nextLarger.pos) {
+        // 이미 역전된 상황: 현재 숫자는 끼워넣을 곳이 없음
+        isOrphanNumber = true;
+        sequenceBreakAnalysis = `\n🚨 [시퀀스 파괴 감지] 현재 숫자 ${currentNumber}을 배치할 곳이 없습니다!`;
+        sequenceBreakAnalysis += `\n   • ${nextSmaller.pos}번 칸에 ${nextSmaller.value}(작은값)가 이미 오른쪽에 있음`;
+        sequenceBreakAnalysis += `\n   • ${nextLarger.pos}번 칸에 ${nextLarger.value}(큰값)가 이미 왼쪽에 있음`;
+        sequenceBreakAnalysis += `\n   → 메인 시퀀스에 끼울 수 없는 "고아 숫자"입니다!`;
+        sequenceBreakAnalysis += `\n   → 버퍼존(1~3번 또는 18~20번 칸)에 배치하세요!`;
+        recommendedBufferZone = currentNumber < 15 ? "left" : "right";
+      } else if (availableSlotsBetween.length === 0 && nextLarger.pos - nextSmaller.pos === 1) {
+        // 바로 붙어있고 사이에 빈칸이 없음
+        isOrphanNumber = true;
+        sequenceBreakAnalysis = `\n🚨 [시퀀스 파괴 감지] ${nextSmaller.value}(${nextSmaller.pos}번)과 ${nextLarger.value}(${nextLarger.pos}번) 사이에 빈칸이 없습니다!`;
+        sequenceBreakAnalysis += `\n   • 현재 숫자 ${currentNumber}은 이 두 숫자 사이에 들어가야 하지만 공간이 없음`;
+        sequenceBreakAnalysis += `\n   → 버퍼존에 배치하여 메인 시퀀스를 보존하세요!`;
+        recommendedBufferZone = currentNumber < 15 ? "left" : "right";
+      }
+    }
+
+    // 더 복잡한 케이스: 현재 숫자가 이미 배치된 "작은 값" 뒤에 들어가야 하는데, 그 뒤에 더 작은 값이 있는 경우
+    // 예: 14가 11번칸에 있고, 16이 13번칸에 있는데, 13을 뽑음
+    // 13은 14보다 작으므로 14(11번칸) 앞에 와야 함
+    // 하지만 14 앞(10번칸 이하)에 빈칸이 있어도, 그 앞에 이미 큰 숫자가 있으면 안됨
+
+    if (!isOrphanNumber && largerOnBoard.length > 0) {
+      const nextLarger = largerOnBoard.reduce((min, p) => p.value < min.value ? p : min);
+
+      // 현재 숫자는 nextLarger 앞에 와야 함
+      // nextLarger 앞의 빈칸들 찾기
+      const slotsBeforeLarger = emptySlots.filter(slot => slot < nextLarger.pos);
+
+      // 그 빈칸들 앞에 현재 숫자보다 큰 값이 있는지 확인
+      for (const slot of slotsBeforeLarger) {
+        const numbersBeforeSlot = placedNumbers.filter(p => p.pos < slot);
+        const hasLargerBefore = numbersBeforeSlot.some(p => p.value > currentNumber);
+
+        if (hasLargerBefore) {
+          // 이 슬롯은 사용 불가 - 앞에 더 큰 숫자가 있음
+          continue;
+        }
+      }
+
+      // 유효한 슬롯이 없으면 고아 숫자
+      const validSlots = slotsBeforeLarger.filter(slot => {
+        const numbersBeforeSlot = placedNumbers.filter(p => p.pos < slot);
+        return !numbersBeforeSlot.some(p => p.value > currentNumber);
+      });
+
+      if (validSlots.length === 0 && slotsBeforeLarger.length > 0) {
+        isOrphanNumber = true;
+        sequenceBreakAnalysis = `\n🚨 [시퀀스 파괴 감지] 현재 숫자 ${currentNumber}을 ${nextLarger.value}(${nextLarger.pos}번) 앞에 배치할 수 없습니다!`;
+        sequenceBreakAnalysis += `\n   • ${nextLarger.pos}번 칸 앞의 모든 빈칸에는 이미 ${currentNumber}보다 큰 숫자가 앞에 있음`;
+        sequenceBreakAnalysis += `\n   → 메인 시퀀스에 끼울 수 없는 "고아 숫자"입니다!`;
+        sequenceBreakAnalysis += `\n   → 버퍼존(1~3번 또는 18~20번 칸)에 배치하세요!`;
+        recommendedBufferZone = "left";
+      }
+    }
+  }
+
+  // 버퍼존 상태 확인
+  const leftBuffer = [1, 2, 3].filter(i => board[i - 1] === null);
+  const rightBuffer = [18, 19, 20].filter(i => board[i - 1] === null);
+
+  const prompt = `당신은 "스트림스" 보드게임의 최고 전문가 AI입니다. **확률 기반 간격 분석**과 **시퀀스 보존 전략**으로 최적의 배치를 결정하세요.
 
 ## ★★★ 핵심 원칙: 확률 기반 간격 분석 ★★★
 단순히 "사이에 올 수 있는 숫자 개수"가 아니라, **실제로 뽑힐 확률**을 계산하여 간격을 결정합니다.
@@ -180,6 +268,26 @@ export async function getAIDecision(
 
 ## 현재 확률 기반 간격 분석 결과
 ${gapAnalysis || "현재 배치된 숫자가 없거나 간격 문제가 없습니다."}
+
+## ★★★ 최우선 원칙: 시퀀스 보존 전략 ★★★
+**메인 시퀀스를 깨는 것은 최악의 선택입니다!**
+
+### 고아 숫자(Orphan Number) 판정
+- 현재 숫자가 이미 배치된 숫자들 사이에 들어갈 수 없을 때 "고아 숫자"로 판정
+- 예: 14가 11번칸에, 16이 13번칸에 있는데 13이 뽑힘
+  - 13은 14보다 작으므로 14 앞에 와야 함
+  - 하지만 14 앞(10번칸 이하)에 배치하면 기존 시퀀스(8→10→11→14→16)가 깨짐!
+  - 이런 경우 13은 "고아 숫자" → 버퍼존으로 보내야 함
+
+### 버퍼존 전략
+- **왼쪽 버퍼존**: 1번, 2번, 3번 칸 (작은 고아 숫자용)
+- **오른쪽 버퍼존**: 18번, 19번, 20번 칸 (큰 고아 숫자용)
+- 고아 숫자는 메인 시퀀스를 깨지 않도록 버퍼존에 배치!
+- 버퍼존 빈칸: 왼쪽 [${leftBuffer.join(', ') || '없음'}], 오른쪽 [${rightBuffer.join(', ') || '없음'}]
+
+### 현재 시퀀스 파괴 분석
+${sequenceBreakAnalysis || "✅ 현재 숫자는 메인 시퀀스에 안전하게 배치 가능합니다."}
+${isOrphanNumber ? `\n⚠️ **고아 숫자 감지!** → ${recommendedBufferZone === "left" ? "왼쪽 버퍼존(1~3번)" : "오른쪽 버퍼존(18~20번)"}에 배치하세요!` : ""}
 
 ## 현재 게임 상황
 - **턴**: ${turn}/20 (남은 뽑기: ${remainingDraws}회)
@@ -217,20 +325,28 @@ ${gapAnalysis || "현재 배치된 숫자가 없거나 간격 문제가 없습�
 - 메인 존 빈칸: ${mainZoneEmpty.join(", ") || "없음"}
 - 메인 존 채워진 칸: ${mainZoneFilled.map(f => `${f.pos}번=${f.value}`).join(", ") || "없음"}
 
-## 의사결정 우선순위
-1. **확률 기반 간격 분석**: 기대값에 따라 적절한 간격 결정
-2. 숫자 1 → 3번 칸 / 숫자 30 → 18번 칸
-3. 같은 숫자(11~19): 기대값이 낮으면 인접 배치
-4. 조커 → 연결 최대화 위치
-5. 그 외: 확률 분석 결과에 따른 최적 위치
+## 의사결정 우선순위 (중요도 순)
+1. **🚨 고아 숫자 판정**: 메인 시퀀스에 끼울 수 없으면 즉시 버퍼존으로! (최우선)
+2. **시퀀스 보존**: 기존 오름차순 시퀀스를 절대 깨지 않는 위치 선택
+3. 숫자 1 → 3번 칸 / 숫자 30 → 18번 칸 (앵커 배치)
+4. **확률 기반 간격 분석**: 기대값에 따라 적절한 간격 결정
+5. 같은 숫자(11~19): 기대값이 낮으면 인접 배치
+6. 조커 → 연결 최대화 위치
+7. 그 외: 확률 분석 결과에 따른 최적 위치
 
 다음 JSON 형식으로만 응답하세요:
 {
   "index": <1-20 사이의 칸 번호>,
   "reason": "<확률 분석을 포함한 배치 이유를 한국어로 2-3문장으로 설명>",
   "confidence": <0-100 사이의 신뢰도>,
-  "strategy": "<ANCHOR_1 | ANCHOR_30 | PROBABILITY_GAP | PROBABILITY_MAIN | ADJACENT_SAME | JOKER_BRIDGE | BUFFER_DISCARD>"
-}`;
+  "strategy": "<ORPHAN_BUFFER | ANCHOR_1 | ANCHOR_30 | PROBABILITY_GAP | PROBABILITY_MAIN | ADJACENT_SAME | JOKER_BRIDGE | BUFFER_DISCARD>"
+}
+
+**전략 설명:**
+- ORPHAN_BUFFER: 고아 숫자를 버퍼존(1~3번 또는 18~20번)에 배치하여 메인 시퀀스 보존
+- ANCHOR_1/30: 앵커 숫자(1 또는 30) 배치
+- PROBABILITY_GAP: 확률 기반 간격 분석에 따른 배치
+- BUFFER_DISCARD: 메인 존에 맞지 않아 버퍼존에 버리는 배치`;
 
   try {
     const result = await geminiModel.generateContent(prompt);
