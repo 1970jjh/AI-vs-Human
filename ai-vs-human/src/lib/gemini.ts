@@ -63,8 +63,7 @@ export async function getAIDecision(
   const conservativeIndex = Math.round(4 + 13 * ratio); // 4~17번 칸 범위 (보수적)
   const suggestedIndex = Math.min(17, Math.max(4, conservativeIndex));
 
-  // ★★★ 핵심 분석: 간격 분석 (Gap Analysis) ★★★
-  // 배치된 숫자들과 현재 숫자 사이에 들어올 수 있는 남은 숫자 계산
+  // ★★★ 핵심 분석: 확률 기반 간격 분석 (Probability-based Gap Analysis) ★★★
   const placedNumbers: { pos: number; value: number }[] = [];
   for (let i = 0; i < board.length; i++) {
     if (board[i] !== null && board[i] !== "★") {
@@ -73,8 +72,14 @@ export async function getAIDecision(
   }
   placedNumbers.sort((a, b) => a.pos - b.pos);
 
-  // 현재 숫자가 숫자인 경우, 인접 배치 시 간격 분석
+  // 확률 계산을 위한 기본 값
+  const totalRemainingCards = remainingNumbers.length; // 남은 총 카드 수
+  const remainingDraws = 20 - turn; // 앞으로 뽑을 기회
+
+  // 현재 숫자가 숫자인 경우, 확률 기반 간격 분석
   let gapAnalysis = "";
+  let recommendedGap = 0; // 권장 간격
+
   if (typeof currentNumber === "number" && placedNumbers.length > 0) {
     // 현재 숫자보다 작은 배치된 숫자들 중 가장 큰 것
     const smallerPlaced = placedNumbers.filter(p => p.value <= currentNumber);
@@ -83,33 +88,70 @@ export async function getAIDecision(
 
     if (smallerPlaced.length > 0) {
       const nearest = smallerPlaced[smallerPlaced.length - 1];
-      // 이 숫자와 현재 숫자 사이에 들어올 수 있는 남은 숫자 개수
-      const numbersBetween = numericRemaining.filter(
+      const numbersBetweenList = numericRemaining.filter(
         n => n > nearest.value && n < currentNumber
-      ).length;
-      // 같은 숫자(11-19)가 남아있다면 추가
-      const sameNumberRemaining = numericRemaining.filter(n => n === currentNumber).length;
-      const totalNeeded = numbersBetween + (currentNumber >= 11 && currentNumber <= 19 ? sameNumberRemaining : 0);
+      );
+      const sameNumberRemaining = currentNumber >= 11 && currentNumber <= 19
+        ? numericRemaining.filter(n => n === currentNumber).length
+        : 0;
+      const totalPossible = numbersBetweenList.length + sameNumberRemaining;
 
-      if (totalNeeded > 0) {
-        gapAnalysis += `\n⚠️ 주의: ${nearest.pos}번 칸의 ${nearest.value}와 현재 숫자 ${currentNumber} 사이에 배치 가능한 남은 숫자가 ${totalNeeded}개 있습니다!`;
-        gapAnalysis += `\n   → ${nearest.value}와 ${currentNumber} 사이 숫자들: ${numericRemaining.filter(n => n > nearest.value && n <= currentNumber).join(', ')}`;
-        gapAnalysis += `\n   → 따라서 ${nearest.pos}번 칸 바로 옆이 아닌, 최소 ${totalNeeded + 1}칸 이상 떨어진 위치에 배치해야 합니다!`;
+      if (totalPossible > 0) {
+        // 확률 계산: 이 숫자들이 실제로 뽑힐 기대값
+        const expectedDraws = totalPossible * (remainingDraws / totalRemainingCards);
+        const probability = Math.min(1, expectedDraws / totalPossible) * 100;
+
+        // 기대값에 따른 권장 간격 계산
+        const suggestedGapForSmaller = Math.ceil(expectedDraws);
+
+        gapAnalysis += `\n📊 [왼쪽 간격 분석] ${nearest.pos}번 칸의 ${nearest.value}와 현재 숫자 ${currentNumber} 사이:`;
+        gapAnalysis += `\n   • 사이에 올 수 있는 숫자: ${numbersBetweenList.join(', ')}${sameNumberRemaining > 0 ? `, ${currentNumber}(동일 숫자 ${sameNumberRemaining}장)` : ''} = 총 ${totalPossible}개`;
+        gapAnalysis += `\n   • 남은 카드: ${totalRemainingCards}장, 남은 뽑기: ${remainingDraws}회`;
+        gapAnalysis += `\n   • 기대 뽑힘 개수: ${expectedDraws.toFixed(1)}개 (확률 ${probability.toFixed(0)}%)`;
+
+        if (expectedDraws < 0.5) {
+          gapAnalysis += `\n   ✅ 결론: 뽑힐 확률이 낮으므로 ${nearest.pos}번 칸 바로 옆 또는 1칸 띄워 배치해도 안전`;
+          recommendedGap = Math.max(recommendedGap, 1);
+        } else if (expectedDraws < 1.5) {
+          gapAnalysis += `\n   ⚠️ 결론: 1개 정도 뽑힐 수 있으므로 1~2칸 간격 권장`;
+          recommendedGap = Math.max(recommendedGap, 2);
+        } else {
+          gapAnalysis += `\n   🚨 결론: ${Math.round(expectedDraws)}개 이상 뽑힐 가능성 높음! 최소 ${suggestedGapForSmaller}칸 이상 간격 필요`;
+          recommendedGap = Math.max(recommendedGap, suggestedGapForSmaller);
+        }
       }
     }
 
     if (largerPlaced.length > 0) {
       const nearest = largerPlaced[0];
-      const numbersBetween = numericRemaining.filter(
+      const numbersBetweenList = numericRemaining.filter(
         n => n > currentNumber && n < nearest.value
-      ).length;
-      const sameNumberRemaining = numericRemaining.filter(n => n === currentNumber).length;
-      const totalNeeded = numbersBetween + (currentNumber >= 11 && currentNumber <= 19 ? sameNumberRemaining : 0);
+      );
+      const sameNumberRemaining = currentNumber >= 11 && currentNumber <= 19
+        ? numericRemaining.filter(n => n === currentNumber).length
+        : 0;
+      const totalPossible = numbersBetweenList.length + sameNumberRemaining;
 
-      if (totalNeeded > 0) {
-        gapAnalysis += `\n⚠️ 주의: 현재 숫자 ${currentNumber}와 ${nearest.pos}번 칸의 ${nearest.value} 사이에 배치 가능한 남은 숫자가 ${totalNeeded}개 있습니다!`;
-        gapAnalysis += `\n   → ${currentNumber}와 ${nearest.value} 사이 숫자들: ${numericRemaining.filter(n => n >= currentNumber && n < nearest.value).join(', ')}`;
-        gapAnalysis += `\n   → 따라서 ${nearest.pos}번 칸 바로 옆이 아닌, 최소 ${totalNeeded + 1}칸 이상 떨어진 위치에 배치해야 합니다!`;
+      if (totalPossible > 0) {
+        const expectedDraws = totalPossible * (remainingDraws / totalRemainingCards);
+        const probability = Math.min(1, expectedDraws / totalPossible) * 100;
+        const suggestedGapForLarger = Math.ceil(expectedDraws);
+
+        gapAnalysis += `\n📊 [오른쪽 간격 분석] 현재 숫자 ${currentNumber}와 ${nearest.pos}번 칸의 ${nearest.value} 사이:`;
+        gapAnalysis += `\n   • 사이에 올 수 있는 숫자: ${numbersBetweenList.join(', ')}${sameNumberRemaining > 0 ? `, ${currentNumber}(동일 숫자 ${sameNumberRemaining}장)` : ''} = 총 ${totalPossible}개`;
+        gapAnalysis += `\n   • 남은 카드: ${totalRemainingCards}장, 남은 뽑기: ${remainingDraws}회`;
+        gapAnalysis += `\n   • 기대 뽑힘 개수: ${expectedDraws.toFixed(1)}개 (확률 ${probability.toFixed(0)}%)`;
+
+        if (expectedDraws < 0.5) {
+          gapAnalysis += `\n   ✅ 결론: 뽑힐 확률이 낮으므로 ${nearest.pos}번 칸 바로 앞 또는 1칸 앞에 배치해도 안전`;
+          recommendedGap = Math.max(recommendedGap, 1);
+        } else if (expectedDraws < 1.5) {
+          gapAnalysis += `\n   ⚠️ 결론: 1개 정도 뽑힐 수 있으므로 1~2칸 간격 권장`;
+          recommendedGap = Math.max(recommendedGap, 2);
+        } else {
+          gapAnalysis += `\n   🚨 결론: ${Math.round(expectedDraws)}개 이상 뽑힐 가능성 높음! 최소 ${suggestedGapForLarger}칸 이상 간격 필요`;
+          recommendedGap = Math.max(recommendedGap, suggestedGapForLarger);
+        }
       }
     }
   }
@@ -120,78 +162,74 @@ export async function getAIDecision(
 
   const prompt = `당신은 "스트림스" 보드게임의 최고 전문가 AI입니다. **확률 기반 간격 분석**으로 최적의 배치를 결정하세요.
 
-## ★★★ 가장 중요한 원칙: 간격 분석 (Gap Analysis) ★★★
-**배치된 숫자와 현재 숫자 사이에 들어올 수 있는 남은 숫자 개수만큼 빈칸을 확보해야 합니다!**
+## ★★★ 핵심 원칙: 확률 기반 간격 분석 ★★★
+단순히 "사이에 올 수 있는 숫자 개수"가 아니라, **실제로 뽑힐 확률**을 계산하여 간격을 결정합니다.
 
-예시: 5번 칸에 5가 있고, 현재 숫자 11을 배치할 때
-- 5와 11 사이에 올 수 있는 숫자: 6, 7, 8, 9, 10, (11 한장 더) = 최대 6개
-- 따라서 5번 칸 바로 옆(6번 칸)이 아닌, 최소 6~7칸 이상 떨어진 위치(11번~12번 칸)에 배치해야 함
-- 6번 칸에 11을 놓으면 중간 숫자들이 들어갈 공간이 없어 연속이 끊김!
+### 확률 계산 공식
+- 기대 뽑힘 개수 = (사이에 올 수 있는 숫자 개수) × (남은 뽑기 횟수 / 남은 총 카드 수)
+- 기대값 < 0.5: 뽑힐 확률 낮음 → 바로 옆 또는 1칸 간격 OK
+- 기대값 0.5~1.5: 1개 정도 뽑힐 수 있음 → 1~2칸 간격 권장
+- 기대값 > 1.5: 여러 개 뽑힐 가능성 높음 → 기대값만큼 간격 필요
 
-## 현재 간격 분석 결과
+### 예시
+- 16번 칸에 27이 있고, 현재 숫자 24를 배치할 때
+- 24와 27 사이: 25, 26 = 2개
+- 남은 카드 38장, 남은 뽑기 18회
+- 기대값 = 2 × (18/38) = 0.95개
+- 결론: 1개 정도만 뽑힐 확률 → 24는 15번 칸(1칸 앞)에 배치해도 안전!
+
+## 현재 확률 기반 간격 분석 결과
 ${gapAnalysis || "현재 배치된 숫자가 없거나 간격 문제가 없습니다."}
 
-## 남은 숫자 현황
-- 남은 숫자들: ${remainingInfo || "없음"}${jokerRemaining > 0 ? `, 조커 ${jokerRemaining}개` : ""}
-- 현재 숫자(${currentNumber})보다 작은 숫자: ${lessCount}개
-- 현재 숫자(${currentNumber})보다 큰 숫자: ${moreCount}개
+## 현재 게임 상황
+- **턴**: ${turn}/20 (남은 뽑기: ${remainingDraws}회)
+- **남은 카드**: ${totalRemainingCards}장
+- **현재 숫자**: ${currentNumber}
+- **남은 숫자들**: ${remainingInfo || "없음"}${jokerRemaining > 0 ? `, 조커 ${jokerRemaining}개` : ""}
+- ${currentNumber}보다 작은 숫자: ${lessCount}개, 큰 숫자: ${moreCount}개
 
 ## 절대 금지 사항
-- 인접한 숫자보다 작은 숫자를 그 뒤에 배치 금지
-- 모든 배치는 엄격한 오름차순(≤) 유지 (같은 숫자는 허용)
-- **간격 분석을 무시한 인접 배치 절대 금지!**
+- 오름차순 위반 배치 금지 (왼쪽 숫자 ≤ 현재 ≤ 오른쪽 숫자)
+- 같은 숫자는 허용 (예: 11 ≤ 11 ≤ 12)
 
-## 적응형 목표 전략
-- **1차 목표**: 16칸 연속 오름차순 (72점)
-- **2차 목표**: 15칸 연속 오름차순 (62점)
-- **3차 목표**: 14칸 연속 오름차순 (53점)
+## 목표 전략
+- 1차: 16칸 연속 (72점) / 2차: 15칸 (62점) / 3차: 14칸 (53점)
 
 ## 구역 정의
-- **메인 존**: 3번~18번 칸 (총 16칸)
-- **버림 존**: 1,2번 칸 + 19,20번 칸
+- **메인 존**: 3번~18번 칸 (16칸)
+- **버림 존**: 1,2번 + 19,20번 칸
 
 ## 앵커 배치
-- 숫자 1 → 3번 칸
-- 숫자 30 → 18번 칸
+- 숫자 1 → 3번 칸 / 숫자 30 → 18번 칸
 
 ## 확률 기반 권장 위치
-- 현재 숫자: ${currentNumber}
-- 비율: ${(ratio * 100).toFixed(1)}% (작은 숫자 비율)
-- **기본 권장 위치: ${suggestedIndex}번 칸**
-- 단, 간격 분석 결과에 따라 조정 필요!
+- 기본 권장: ${suggestedIndex}번 칸 (비율 ${(ratio * 100).toFixed(1)}%)
+- **확률 분석에 따른 권장 간격: ${recommendedGap}칸**
 
 ## 같은 숫자(11~19) 처리
-- 같은 숫자도 연속 오름차순으로 인정 (예: 11, 11, 12 = 3칸 연속)
-- **두 번째 같은 숫자**: 첫 번째와 인접 배치 권장 (단, 다른 숫자가 사이에 없을 때만!)
+- 두 번째 같은 숫자는 첫 번째와 인접 배치 (사이에 올 숫자의 기대값이 낮을 때)
 
 ## 조커(★) 전략
-- 조커는 어떤 숫자와도 오름차순 만족
 - 끊어진 연결을 이어줄 수 있는 위치에 배치
 
 ## 현재 보드 상태
-- 턴: ${turn}/20
-- 현재 배치할 숫자: ${currentNumber}
 - 보드: ${boardVisualization}
 - 메인 존 빈칸: ${mainZoneEmpty.join(", ") || "없음"}
 - 메인 존 채워진 칸: ${mainZoneFilled.map(f => `${f.pos}번=${f.value}`).join(", ") || "없음"}
-- 모든 빈칸: ${emptySlots.join(", ")}
 
 ## 의사결정 우선순위
-1. **간격 분석 최우선**: 배치된 숫자와 현재 숫자 사이에 들어올 남은 숫자 개수 확인
-2. 숫자 1이면 → 3번 칸
-3. 숫자 30이면 → 18번 칸
-4. 11~19 두 번째 숫자: 첫 번째와 인접 (단, 사이에 올 숫자가 없을 때만!)
-5. 조커(★) → 연결 효과 최대화 위치
-6. 그 외: 권장 위치 기준으로 간격을 충분히 확보한 위치에 배치
-
-**중요**: 배치 시 왼쪽 숫자와의 간격, 오른쪽 숫자와의 간격 모두 고려하여 남은 숫자들이 들어갈 공간을 확보하세요!
+1. **확률 기반 간격 분석**: 기대값에 따라 적절한 간격 결정
+2. 숫자 1 → 3번 칸 / 숫자 30 → 18번 칸
+3. 같은 숫자(11~19): 기대값이 낮으면 인접 배치
+4. 조커 → 연결 최대화 위치
+5. 그 외: 확률 분석 결과에 따른 최적 위치
 
 다음 JSON 형식으로만 응답하세요:
 {
   "index": <1-20 사이의 칸 번호>,
-  "reason": "<간격 분석을 포함한 배치 이유를 한국어로 2-3문장으로 설명>",
+  "reason": "<확률 분석을 포함한 배치 이유를 한국어로 2-3문장으로 설명>",
   "confidence": <0-100 사이의 신뢰도>,
-  "strategy": "<ANCHOR_1 | ANCHOR_30 | GAP_ANALYSIS | PROBABILITY_MAIN | ADJACENT_SAME | JOKER_BRIDGE | BUFFER_DISCARD>"
+  "strategy": "<ANCHOR_1 | ANCHOR_30 | PROBABILITY_GAP | PROBABILITY_MAIN | ADJACENT_SAME | JOKER_BRIDGE | BUFFER_DISCARD>"
 }`;
 
   try {
