@@ -25,6 +25,13 @@ interface AIDecision {
 
 const ADMIN_PASSWORD = "6749467";
 
+// 게임용 20장 덱 생성 (전체 40장에서 랜덤 20장 선택)
+function createGameDeck(): (number | "★")[] {
+  const fullDeck = createDeck(); // 40장
+  const shuffled = shuffleDeck(fullDeck);
+  return shuffled.slice(0, 20); // 20장만 선택
+}
+
 export default function Home() {
   // 인증 상태
   const [isAuthenticated, setIsAuthenticated] = useState(false);
@@ -48,6 +55,17 @@ export default function Home() {
   const [useGemini, setUseGemini] = useState(true);
   const prevScoreRef = useRef(0);
   const hasPlayedFanfareRef = useRef(false);
+
+  // 덮개 시스템 상태
+  const [shuffledDeck, setShuffledDeck] = useState<(number | "★")[]>([]);
+  const [revealedCovers, setRevealedCovers] = useState<boolean[]>(Array(20).fill(false));
+
+  // 초기 덱 생성 (컴포넌트 마운트 시)
+  useEffect(() => {
+    if (shuffledDeck.length === 0) {
+      setShuffledDeck(createGameDeck());
+    }
+  }, [shuffledDeck.length]);
 
   // 점수 변경 시 효과음 재생
   useEffect(() => {
@@ -77,26 +95,18 @@ export default function Home() {
     }
   }, [isDarkMode]);
 
-  // 남은 숫자 계산
+  // 남은 숫자 계산 (아직 공개되지 않은 덮개의 숫자들)
   const getRemainingNumbers = useCallback(() => {
-    const deck = createDeck();
     const remaining: (number | "★")[] = [];
 
-    for (const num of deck) {
-      const usedCount = usedNumbers.filter((n) => n === num).length;
-      const deckCount = deck.filter((n) => n === num).length;
-      const remainingCount = deckCount - usedCount;
-
-      for (let i = 0; i < remainingCount; i++) {
-        const isDoubleCard = typeof num === "number" && num >= 11 && num <= 19;
-        if (!remaining.includes(num) || isDoubleCard) {
-          remaining.push(num);
-        }
+    for (let i = 0; i < shuffledDeck.length; i++) {
+      if (!revealedCovers[i]) {
+        remaining.push(shuffledDeck[i]);
       }
     }
 
     return remaining;
-  }, [usedNumbers]);
+  }, [shuffledDeck, revealedCovers]);
 
   // Gemini API 호출
   const callGeminiAPI = async (
@@ -186,16 +196,25 @@ export default function Home() {
     [aiBoard, turn, isProcessing, getRemainingNumbers, useGemini, usedNumbers]
   );
 
-  // 랜덤 선택
-  const handleRandomSelect = useCallback(() => {
-    if (turn >= BOARD_SIZE || isProcessing) return;
+  // 덮개 공개 핸들러
+  const handleRevealCover = useCallback(
+    (index: number) => {
+      if (turn >= BOARD_SIZE || isProcessing) return;
+      if (revealedCovers[index]) return;
 
-    const remaining = getRemainingNumbers();
-    if (remaining.length === 0) return;
+      // 덮개 공개
+      const newRevealedCovers = [...revealedCovers];
+      newRevealedCovers[index] = true;
+      setRevealedCovers(newRevealedCovers);
 
-    const shuffled = shuffleDeck(remaining);
-    handleSelectNumber(shuffled[0]);
-  }, [turn, isProcessing, getRemainingNumbers, handleSelectNumber]);
+      // 해당 숫자로 게임 진행
+      const num = shuffledDeck[index];
+      if (num !== undefined) {
+        handleSelectNumber(num);
+      }
+    },
+    [turn, isProcessing, revealedCovers, shuffledDeck, handleSelectNumber]
+  );
 
   // 게임 리셋
   const handleReset = () => {
@@ -209,6 +228,9 @@ export default function Home() {
     setIsProcessing(false);
     prevScoreRef.current = 0;
     hasPlayedFanfareRef.current = false;
+    // 덮개 시스템 리셋
+    setShuffledDeck(createGameDeck());
+    setRevealedCovers(Array(20).fill(false));
   };
 
   const isGameFinished = turn >= BOARD_SIZE;
@@ -354,9 +376,10 @@ export default function Home() {
               <NumberPanel
                 usedNumbers={usedNumbers}
                 currentNumber={currentNumber}
-                onSelectNumber={handleSelectNumber}
-                onRandomSelect={handleRandomSelect}
                 disabled={isGameFinished || isProcessing}
+                shuffledDeck={shuffledDeck}
+                revealedCovers={revealedCovers}
+                onRevealCover={handleRevealCover}
               />
               {/* 점수표 - 숫자판 아래 (남은 공간 채움) */}
               <div className="mt-3 flex-1">

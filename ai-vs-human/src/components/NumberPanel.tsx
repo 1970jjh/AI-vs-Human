@@ -6,23 +6,18 @@ interface NumberPanelProps {
   onSelectNumber?: (number: number | "★") => void;
   onRandomSelect?: () => void;
   disabled?: boolean;
+  // 새로운 props: 덮개 시스템용
+  shuffledDeck?: (number | "★")[];
+  revealedCovers?: boolean[];
+  onRevealCover?: (index: number) => void;
 }
 
-// 전체 카드 목록 생성 (40장: 1-10 각 1장, 11-19 각 2장, 20-30 각 1장, 조커 1장)
-function createCardList(): (number | "★")[] {
-  const cards: (number | "★")[] = [];
-  // 1-10: 각 1장
-  for (let i = 1; i <= 10; i++) cards.push(i);
-  // 11-19: 각 2장
-  for (let i = 11; i <= 19; i++) {
-    cards.push(i);
-    cards.push(i);
-  }
-  // 20-30: 각 1장
-  for (let i = 20; i <= 30; i++) cards.push(i);
-  // 조커 1장
-  cards.push("★");
-  return cards;
+// 덮개 레이블 생성 (A1-E4, 5행 x 4열 = 20개)
+function getCoverLabel(index: number): string {
+  const row = Math.floor(index / 4);
+  const col = (index % 4) + 1;
+  const rowLabel = String.fromCharCode(65 + row); // A, B, C, D, E
+  return `${rowLabel}${col}`;
 }
 
 export default function NumberPanel({
@@ -31,33 +26,36 @@ export default function NumberPanel({
   onSelectNumber,
   onRandomSelect,
   disabled = false,
+  shuffledDeck = [],
+  revealedCovers = [],
+  onRevealCover,
 }: NumberPanelProps) {
-  const allCards = createCardList(); // 40장
-
-  // 각 카드가 사용되었는지 추적 (인덱스 기반)
-  const getUsedIndices = () => {
-    const usedIndices: number[] = [];
-    const tempUsed = [...usedNumbers];
-
-    for (let i = 0; i < allCards.length; i++) {
-      const card = allCards[i];
-      const idx = tempUsed.indexOf(card);
-      if (idx !== -1) {
-        usedIndices.push(i);
-        tempUsed.splice(idx, 1);
-      }
-    }
-    return usedIndices;
-  };
-
-  const usedIndices = getUsedIndices();
   const totalUsed = usedNumbers.length;
   const totalCards = 20;
 
-  const handleCardClick = (cardIndex: number) => {
-    if (disabled || usedIndices.includes(cardIndex)) return;
-    const card = allCards[cardIndex];
-    onSelectNumber?.(card);
+  // 덮개 클릭 핸들러
+  const handleCoverClick = (index: number) => {
+    if (disabled || revealedCovers[index]) return;
+    onRevealCover?.(index);
+  };
+
+  // 랜덤 버튼 클릭 - 남은 덮개 중 하나를 랜덤하게 선택
+  const handleRandomClick = () => {
+    if (disabled) return;
+
+    // 아직 열리지 않은 덮개 인덱스 찾기
+    const unrevealedIndices: number[] = [];
+    for (let i = 0; i < 20; i++) {
+      if (!revealedCovers[i]) {
+        unrevealedIndices.push(i);
+      }
+    }
+
+    if (unrevealedIndices.length === 0) return;
+
+    // 랜덤 선택
+    const randomIndex = unrevealedIndices[Math.floor(Math.random() * unrevealedIndices.length)];
+    onRevealCover?.(randomIndex);
   };
 
   return (
@@ -77,18 +75,16 @@ export default function NumberPanel({
       </div>
 
       {/* 랜덤 선택 버튼 */}
-      {onRandomSelect && (
-        <button
-          onClick={onRandomSelect}
-          disabled={disabled}
-          className="w-full mb-4 py-3 flex items-center justify-center gap-2 bg-primary/20 text-primary
-            rounded-lg font-digital font-bold hover:bg-primary/30 transition-colors
-            disabled:opacity-50 disabled:cursor-not-allowed"
-        >
-          <span className="text-xl">🎲</span>
-          <span>랜덤 숫자 출제</span>
-        </button>
-      )}
+      <button
+        onClick={handleRandomClick}
+        disabled={disabled}
+        className="w-full mb-4 py-3 flex items-center justify-center gap-2 bg-primary/20 text-primary
+          rounded-lg font-digital font-bold hover:bg-primary/30 transition-colors
+          disabled:opacity-50 disabled:cursor-not-allowed"
+      >
+        <span className="text-xl">🎲</span>
+        <span>랜덤 숫자 출제</span>
+      </button>
 
       {/* 현재 선택된 숫자 표시 */}
       {currentNumber !== null && (
@@ -100,33 +96,43 @@ export default function NumberPanel({
         </div>
       )}
 
-      {/* 숫자 그리드 - 8열 */}
-      <div className="grid grid-cols-8 gap-1">
-        {allCards.map((card, idx) => {
-          const isUsed = usedIndices.includes(idx);
+      {/* 덮개 그리드 - 5행 x 4열 */}
+      <div className="grid grid-cols-4 gap-2">
+        {Array.from({ length: 20 }).map((_, idx) => {
+          const isRevealed = revealedCovers[idx];
+          const card = shuffledDeck[idx];
           const isJoker = card === "★";
-          const isCurrent = currentNumber === card && !isUsed;
+          const coverLabel = getCoverLabel(idx);
 
           return (
             <button
               key={idx}
-              onClick={() => handleCardClick(idx)}
-              disabled={isUsed || disabled}
+              onClick={() => handleCoverClick(idx)}
+              disabled={isRevealed || disabled}
               className={`
-                aspect-square flex items-center justify-center rounded border-2 font-digital font-bold text-xs
-                transition-all duration-200
-                ${isUsed
-                  ? "bg-muted/10 border-muted/30 text-muted/50 cursor-not-allowed line-through"
-                  : isCurrent
-                    ? "bg-accent/30 border-accent text-accent ring-2 ring-accent"
-                    : isJoker
-                      ? "bg-purple-500/20 border-purple-500/50 text-purple-400 hover:bg-purple-500/30 cursor-pointer"
-                      : "border-border hover:border-accent/50 hover:bg-accent/10 cursor-pointer"
+                aspect-square flex items-center justify-center rounded-lg border-2 font-digital font-bold text-sm
+                transition-all duration-300 transform
+                ${isRevealed
+                  ? isJoker
+                    ? "bg-purple-500/30 border-purple-500 text-purple-400"
+                    : "bg-accent/20 border-accent/50 text-accent"
+                  : "bg-gradient-to-br from-blue-600 to-purple-600 border-blue-400 text-white hover:scale-105 hover:shadow-lg hover:shadow-purple-500/30 cursor-pointer"
                 }
+                ${isRevealed ? "cursor-default" : ""}
               `}
-              style={!isUsed && !isCurrent && !isJoker ? { backgroundColor: "var(--surface)", color: "var(--text)" } : undefined}
+              style={{
+                minHeight: "50px"
+              }}
             >
-              {card}
+              {isRevealed ? (
+                <span className={`text-xl ${isJoker ? "text-purple-400" : ""}`}>
+                  {card}
+                </span>
+              ) : (
+                <span className="text-xs font-mono-digital opacity-90">
+                  {coverLabel}
+                </span>
+              )}
             </button>
           );
         })}
@@ -136,16 +142,20 @@ export default function NumberPanel({
       <div className="mt-3 pt-2 border-t text-xs text-muted font-mono-digital" style={{ borderColor: "var(--border)" }}>
         <div className="flex items-center gap-4">
           <div className="flex items-center gap-1">
-            <div className="w-2 h-2 bg-muted/50 rounded" />
-            <span>사용됨</span>
+            <div className="w-3 h-3 rounded bg-gradient-to-br from-blue-600 to-purple-600" />
+            <span>미공개</span>
           </div>
           <div className="flex items-center gap-1">
-            <div className="w-2 h-2 bg-purple-500 rounded" />
+            <div className="w-3 h-3 bg-accent/50 rounded" />
+            <span>공개됨</span>
+          </div>
+          <div className="flex items-center gap-1">
+            <div className="w-3 h-3 bg-purple-500 rounded" />
             <span>조커</span>
           </div>
         </div>
         <div className="mt-1 text-muted/70">
-          11~19: 각 2장씩
+          덮개를 클릭하거나 랜덤 버튼을 눌러 숫자를 공개하세요
         </div>
       </div>
     </div>
