@@ -6,17 +6,17 @@ interface NumberPanelProps {
   onSelectNumber?: (number: number | "★") => void;
   onRandomSelect?: () => void;
   disabled?: boolean;
-  // 새로운 props: 덮개 시스템용
+  // 덮개 시스템용
   shuffledDeck?: (number | "★")[];
   revealedCovers?: boolean[];
   onRevealCover?: (index: number) => void;
 }
 
-// 덮개 레이블 생성 (A1-E4, 5행 x 4열 = 20개)
+// 덮개 레이블 생성 (A1-H5, 8행 x 5열 = 40개)
 function getCoverLabel(index: number): string {
-  const row = Math.floor(index / 4);
-  const col = (index % 4) + 1;
-  const rowLabel = String.fromCharCode(65 + row); // A, B, C, D, E
+  const row = Math.floor(index / 5);
+  const col = (index % 5) + 1;
+  const rowLabel = String.fromCharCode(65 + row); // A, B, C, D, E, F, G, H
   return `${rowLabel}${col}`;
 }
 
@@ -31,7 +31,7 @@ export default function NumberPanel({
   onRevealCover,
 }: NumberPanelProps) {
   const totalUsed = usedNumbers.length;
-  const totalCards = 20;
+  const totalCards = 40;
 
   // 덮개 클릭 핸들러
   const handleCoverClick = (index: number) => {
@@ -45,7 +45,7 @@ export default function NumberPanel({
 
     // 아직 열리지 않은 덮개 인덱스 찾기
     const unrevealedIndices: number[] = [];
-    for (let i = 0; i < 20; i++) {
+    for (let i = 0; i < 40; i++) {
       if (!revealedCovers[i]) {
         unrevealedIndices.push(i);
       }
@@ -59,17 +59,17 @@ export default function NumberPanel({
   };
 
   return (
-    <div className="rounded-xl p-4 border" style={{ backgroundColor: "var(--surface)", borderColor: "var(--border)" }}>
+    <div className="rounded-xl p-3 border" style={{ backgroundColor: "var(--surface)", borderColor: "var(--border)" }}>
       {/* 헤더 */}
-      <div className="flex items-center justify-between mb-4">
+      <div className="flex items-center justify-between mb-2">
         <div>
-          <h3 className="font-digital font-bold text-lg" style={{ color: "var(--text)" }}>숫자 선택</h3>
-          <p className="font-mono-digital text-sm text-muted">
-            사용: {totalUsed}/{totalCards}
+          <h3 className="font-digital font-bold text-base" style={{ color: "var(--text)" }}>숫자 선택</h3>
+          <p className="font-mono-digital text-xs text-muted">
+            사용: {totalUsed}/20
           </p>
         </div>
-        <div className="flex items-center gap-2">
-          <div className="w-3 h-3 bg-accent rounded-full" />
+        <div className="flex items-center gap-1">
+          <div className="w-2 h-2 bg-accent rounded-full" />
           <span className="text-xs text-muted font-mono-digital">선택 가능</span>
         </div>
       </div>
@@ -78,27 +78,27 @@ export default function NumberPanel({
       <button
         onClick={handleRandomClick}
         disabled={disabled}
-        className="w-full mb-4 py-3 flex items-center justify-center gap-2 bg-primary/20 text-primary
-          rounded-lg font-digital font-bold hover:bg-primary/30 transition-colors
+        className="w-full mb-2 py-2 flex items-center justify-center gap-2 bg-primary/20 text-primary
+          rounded-lg font-digital font-bold text-sm hover:bg-primary/30 transition-colors
           disabled:opacity-50 disabled:cursor-not-allowed"
       >
-        <span className="text-xl">🎲</span>
+        <span className="text-lg">🎲</span>
         <span>랜덤 숫자 출제</span>
       </button>
 
       {/* 현재 선택된 숫자 표시 */}
       {currentNumber !== null && (
-        <div className="mb-4 p-4 bg-primary/20 rounded-lg text-center animate-pulse">
-          <span className="text-sm text-muted font-mono-digital">출제된 숫자</span>
-          <div className={`font-digital text-5xl font-bold ${currentNumber === "★" ? "text-purple-400" : "text-white"}`}>
+        <div className="mb-2 p-2 bg-primary/20 rounded-lg text-center animate-pulse">
+          <span className="text-xs text-muted font-mono-digital">출제된 숫자</span>
+          <div className={`font-digital text-3xl font-bold ${currentNumber === "★" ? "text-purple-400" : "text-white"}`}>
             {currentNumber}
           </div>
         </div>
       )}
 
-      {/* 덮개 그리드 - 5행 x 4열 */}
-      <div className="grid grid-cols-4 gap-2">
-        {Array.from({ length: 20 }).map((_, idx) => {
+      {/* 덮개 그리드 - 5열 x 8행 = 40개 */}
+      <div className="grid grid-cols-5 gap-1">
+        {Array.from({ length: 40 }).map((_, idx) => {
           const isRevealed = revealedCovers[idx];
           const card = shuffledDeck[idx];
           const isJoker = card === "★";
@@ -110,26 +110,29 @@ export default function NumberPanel({
               onClick={() => handleCoverClick(idx)}
               disabled={isRevealed || disabled}
               className={`
-                aspect-square flex items-center justify-center rounded-lg border-2 font-digital font-bold text-sm
+                aspect-square flex items-center justify-center rounded-md font-digital font-bold
                 transition-all duration-300 transform
                 ${isRevealed
                   ? isJoker
-                    ? "bg-purple-500/30 border-purple-500 text-purple-400"
-                    : "bg-accent/20 border-accent/50 text-accent"
-                  : "bg-gradient-to-br from-blue-600 to-purple-600 border-blue-400 text-white hover:scale-105 hover:shadow-lg hover:shadow-purple-500/30 cursor-pointer"
+                    ? "bg-purple-500/40 text-purple-300 border border-purple-400/50"
+                    : "bg-emerald-500/30 text-emerald-300 border border-emerald-400/50"
+                  : `backdrop-blur-md bg-white/10 border border-white/20 text-white/90
+                     hover:bg-white/20 hover:border-white/40 hover:scale-105
+                     hover:shadow-lg hover:shadow-white/10 cursor-pointer
+                     active:scale-95`
                 }
-                ${isRevealed ? "cursor-default" : ""}
               `}
               style={{
-                minHeight: "50px"
+                minHeight: "36px",
+                fontSize: isRevealed ? "14px" : "11px"
               }}
             >
               {isRevealed ? (
-                <span className={`text-xl ${isJoker ? "text-purple-400" : ""}`}>
+                <span className={`font-bold ${isJoker ? "text-purple-300" : "text-emerald-300"}`}>
                   {card}
                 </span>
               ) : (
-                <span className="text-xs font-mono-digital opacity-90">
+                <span className="font-mono-digital font-semibold tracking-tight">
                   {coverLabel}
                 </span>
               )}
@@ -139,23 +142,20 @@ export default function NumberPanel({
       </div>
 
       {/* 범례 */}
-      <div className="mt-3 pt-2 border-t text-xs text-muted font-mono-digital" style={{ borderColor: "var(--border)" }}>
-        <div className="flex items-center gap-4">
+      <div className="mt-2 pt-2 border-t text-xs text-muted font-mono-digital" style={{ borderColor: "var(--border)" }}>
+        <div className="flex items-center justify-center gap-3">
           <div className="flex items-center gap-1">
-            <div className="w-3 h-3 rounded bg-gradient-to-br from-blue-600 to-purple-600" />
+            <div className="w-2 h-2 rounded backdrop-blur-md bg-white/20 border border-white/30" />
             <span>미공개</span>
           </div>
           <div className="flex items-center gap-1">
-            <div className="w-3 h-3 bg-accent/50 rounded" />
-            <span>공개됨</span>
+            <div className="w-2 h-2 bg-emerald-500/50 rounded border border-emerald-400/50" />
+            <span>공개</span>
           </div>
           <div className="flex items-center gap-1">
-            <div className="w-3 h-3 bg-purple-500 rounded" />
+            <div className="w-2 h-2 bg-purple-500/50 rounded border border-purple-400/50" />
             <span>조커</span>
           </div>
-        </div>
-        <div className="mt-1 text-muted/70">
-          덮개를 클릭하거나 랜덤 버튼을 눌러 숫자를 공개하세요
         </div>
       </div>
     </div>
