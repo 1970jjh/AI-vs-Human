@@ -388,7 +388,8 @@ export default function Home() {
           </div>
         </header>
 
-        <div className="flex-1 grid gap-3 min-h-0" style={{ gridTemplateColumns: "50fr 22fr" }}>
+        {/* 가운데 컬럼 폭 = 역ㄷ자 보드 폭(높이에서 계산), 남는 폭은 모두 AI 결정 패널로 */}
+        <div className="flex-1 grid gap-3 min-h-0" style={{ gridTemplateColumns: "min(calc(60vh - 20px), 60%) 1fr" }}>
           {/* 중앙: 역ㄷ자 보드 (가운데 빈 공간에 출제된 숫자) */}
           <div className="min-h-0">
             <GameBoard
