@@ -13,6 +13,7 @@ import {
 } from "@/lib/ai-logic";
 import { engineDecision, slotOutlook, Outlook } from "@/lib/engine";
 import { playScoreSound, playFanfareSound } from "@/lib/sounds";
+import { startMusic, stopMusic } from "@/lib/music";
 
 interface AIDecision {
   number: number | "★";
@@ -40,6 +41,14 @@ export default function Home() {
 
   // 테마 상태
   const [isDarkMode, setIsDarkMode] = useState(true);
+  const [isMusicOn, setIsMusicOn] = useState(false);
+
+  // 배경음악 켜기/끄기 (화면을 떠날 때도 끈다)
+  useEffect(() => {
+    if (isMusicOn) startMusic();
+    else stopMusic();
+    return stopMusic;
+  }, [isMusicOn]);
 
   // 게임 상태
   const [aiBoard, setAiBoard] = useState<(number | "★" | null)[]>(
@@ -147,11 +156,9 @@ export default function Home() {
       setIsProcessing(true);
       setCurrentNumber(num);
 
-      // 아직 안 나온 카드: 공개 전 덮개 카드에서 방금 뽑힌 카드 "한 장만" 뺀다
-      // (11~19는 2장씩이라 filter 로 전부 빼면 남은 한 장까지 사라진다)
-      const remaining = [...getRemainingNumbers()];
-      const selfIdx = remaining.indexOf(num);
-      if (selfIdx !== -1) remaining.splice(selfIdx, 1);
+      // 아직 안 나온 카드 = 공개 전 덮개 카드
+      // (방금 뽑힌 카드는 이미 공개 처리되어 여기 포함되지 않는다)
+      const remaining = getRemainingNumbers();
       const drawsLeft = BOARD_SIZE - turn - 1;
       let decision;
 
@@ -161,8 +168,8 @@ export default function Home() {
 
       // Gemini OFF 이거나 실패하면: 시뮬레이션 엔진(무료, 브라우저에서 계산)
       if (!decision || decision.strategy === "FALLBACK") {
-        // 화면이 "분석 중"을 먼저 그리도록 한 틱 양보
-        await new Promise((r) => setTimeout(r, 30));
+        // 엔진은 0.1초면 끝나지만, AI가 고민하는 느낌이 나도록 잠깐 뜸을 들인다
+        await new Promise((r) => setTimeout(r, useGemini ? 30 : 1500));
         decision = engineDecision(aiBoard, num, remaining, drawsLeft);
       }
 
@@ -198,7 +205,8 @@ export default function Home() {
   // 덮개 공개 핸들러
   const handleRevealCover = useCallback(
     (index: number) => {
-      if (turn >= BOARD_SIZE || isProcessing) return;
+      // 공개된 숫자가 아직 배치되지 않았으면(AI 결정 대기 중) 다음 카드를 열 수 없다
+      if (turn >= BOARD_SIZE || isProcessing || currentNumber !== null) return;
       if (revealedCovers[index]) return;
 
       // 덮개 공개
@@ -206,13 +214,11 @@ export default function Home() {
       newRevealedCovers[index] = true;
       setRevealedCovers(newRevealedCovers);
 
-      // 해당 숫자로 게임 진행
+      // 숫자만 공개하고, 배치는 강사가 «AI 결정» 버튼을 누를 때 한다
       const num = shuffledDeck[index];
-      if (num !== undefined) {
-        handleSelectNumber(num);
-      }
+      if (num !== undefined) setCurrentNumber(num);
     },
-    [turn, isProcessing, revealedCovers, shuffledDeck, handleSelectNumber]
+    [turn, isProcessing, currentNumber, revealedCovers, shuffledDeck]
   );
 
   // 게임 리셋
@@ -303,8 +309,9 @@ export default function Home() {
     );
   }
 
+  const isWaitingDecision = currentNumber !== null && !isProcessing;
   const drawn = currentNumber ?? aiDecisions[0]?.number ?? null;
-  const placedIndex = isProcessing ? null : aiDecisions[0]?.index ?? null;
+  const placedIndex = currentNumber !== null ? null : aiDecisions[0]?.index ?? null;
   const statusText = isGameFinished
     ? `게임 완료! 최종 ${aiScore}점${aiScore >= 72 ? " (목표 달성!)" : ""}`
     : isProcessing
@@ -324,7 +331,7 @@ export default function Home() {
           <NumberPanel
             usedNumbers={usedNumbers}
             currentNumber={currentNumber}
-            disabled={isGameFinished || isProcessing}
+            disabled={isGameFinished || isProcessing || currentNumber !== null}
             shuffledDeck={shuffledDeck}
             revealedCovers={revealedCovers}
             onRevealCover={handleRevealCover}
@@ -348,6 +355,18 @@ export default function Home() {
           </div>
 
           <div className="flex items-center gap-4">
+            {/* 배경음악 토글 */}
+            <button
+              onClick={() => setIsMusicOn(!isMusicOn)}
+              className={`px-3 py-1.5 rounded-lg text-sm font-digital font-medium transition-colors border ${
+                isMusicOn
+                  ? "bg-pink-500/20 text-pink-400 border-pink-500/50"
+                  : "bg-muted/20 text-muted border-muted/50"
+              }`}
+            >
+              {isMusicOn ? "🎵 Music ON" : "🎵 Music OFF"}
+            </button>
+
             {/* 다크/라이트 모드 토글 */}
             <button
               onClick={() => setIsDarkMode(!isDarkMode)}
@@ -400,7 +419,18 @@ export default function Home() {
               isManualMode={false}
               showPlacementMarker={true}
             >
-              <div className="font-digital text-muted" style={{ fontSize: "calc(var(--cell) * 0.3)" }}>출제된 숫자</div>
+              <button
+                onClick={() => currentNumber !== null && handleSelectNumber(currentNumber)}
+                disabled={!isWaitingDecision}
+                className={`pointer-events-auto font-digital font-bold rounded-xl border-2 transition-all ${
+                  isWaitingDecision
+                    ? "bg-gradient-to-r from-purple-500 to-cyan-500 text-white border-white/40 shadow-lg shadow-purple-500/40 hover:scale-105 active:scale-95 animate-pulse cursor-pointer"
+                    : "bg-transparent text-muted border-border opacity-40 cursor-not-allowed"
+                }`}
+                style={{ fontSize: "calc(var(--cell) * 0.36)", padding: "calc(var(--cell) * 0.12) calc(var(--cell) * 0.45)" }}
+              >
+                🤖 AI 결정
+              </button>
               <div
                 className={`font-digital font-black leading-none ${drawn === "★" ? "text-purple-400" : ""} ${isProcessing ? "animate-pulse" : ""}`}
                 style={{ fontSize: "calc(var(--cell) * 2.4)", color: drawn === "★" ? undefined : "var(--text-strong)" }}
