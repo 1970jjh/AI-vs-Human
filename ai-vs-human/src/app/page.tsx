@@ -303,23 +303,46 @@ export default function Home() {
     );
   }
 
-  return (
-    <div className="h-screen flex flex-col overflow-hidden" style={{ backgroundColor: "var(--background)" }}>
-      {/* 헤더 */}
-      <header className="border-b px-6 py-3 flex-shrink-0" style={{ backgroundColor: "var(--surface)", borderColor: "var(--border)" }}>
-        <div className="max-w-[1920px] mx-auto flex items-center justify-between">
-          <div className="px-4 py-2 rounded-xl bg-gradient-to-r from-purple-500/20 via-blue-500/20 to-cyan-500/20 backdrop-blur-sm border border-purple-500/30 shadow-lg shadow-purple-500/10">
-            <h1 className="font-digital text-3xl font-bold bg-gradient-to-r from-purple-400 via-pink-400 to-cyan-400 bg-clip-text text-transparent drop-shadow-lg">AI vs Human</h1>
-            <p className="font-mono-digital text-sm text-cyan-400/80">
-              {useGemini ? "Gemini 4 Hydrogen AI" : "로컬 72점 요새 전략"}
-            </p>
-          </div>
+  const drawn = currentNumber ?? aiDecisions[0]?.number ?? null;
+  const placedIndex = isProcessing ? null : aiDecisions[0]?.index ?? null;
+  const statusText = isGameFinished
+    ? `게임 완료! 최종 ${aiScore}점${aiScore >= 72 ? " (목표 달성!)" : ""}`
+    : isProcessing
+      ? `${useGemini ? "Gemini AI" : "AI"} 분석 중...`
+      : placedIndex !== null
+        ? `→ ${placedIndex + 1}번 칸에 배치`
+        : "";
 
-          {/* 중앙 슬로건 */}
+  return (
+    <div
+      className="h-screen p-3 grid gap-3 overflow-hidden"
+      style={{ backgroundColor: "var(--background)", gridTemplateColumns: "28fr 72fr" }}
+    >
+      {/* 왼쪽: 숫자 선택 패널(화면 맨 위부터 끝까지) + 점수표 */}
+      <div className="flex flex-col min-h-0">
+        <div className="flex-1 min-h-0">
+          <NumberPanel
+            usedNumbers={usedNumbers}
+            currentNumber={currentNumber}
+            disabled={isGameFinished || isProcessing}
+            shuffledDeck={shuffledDeck}
+            revealedCovers={revealedCovers}
+            onRevealCover={handleRevealCover}
+          />
+        </div>
+        <div className="mt-2 flex-shrink-0">
+          <ScoreTable />
+        </div>
+      </div>
+
+      {/* 오른쪽: 상단 바 + (보드 | AI 결정 패널) */}
+      <div className="flex flex-col min-h-0">
+        <header className="flex-shrink-0 flex items-center gap-4 mb-3">
+          {/* 슬로건 */}
           <div className="flex-1 flex justify-center">
             <div className="px-6 py-2 rounded-xl bg-gradient-to-r from-cyan-500/10 via-purple-500/10 to-pink-500/10 border border-cyan-500/30">
-              <span className="font-digital text-xl font-bold tracking-wider bg-gradient-to-r from-cyan-400 via-purple-400 to-pink-400 bg-clip-text text-transparent">
-                JJ CREATIVE EDU with AI
+              <span className="font-digital text-2xl font-bold tracking-wider bg-gradient-to-r from-cyan-400 via-purple-400 to-pink-400 bg-clip-text text-transparent">
+                AI vs Team Intelligence
               </span>
             </div>
           </div>
@@ -363,117 +386,45 @@ export default function Home() {
               리셋
             </button>
           </div>
-        </div>
-      </header>
+        </header>
 
-      {/* 메인 콘텐츠 */}
-      <main className="flex-1 p-3 min-h-0">
-        <div className="max-w-[1920px] mx-auto h-full">
-          <div className="grid gap-3 h-full min-h-0" style={{ gridTemplateColumns: "28fr 50fr 22fr" }}>
-            {/* 왼쪽: 숫자 선택 패널 + 점수표 */}
-            <div className="flex flex-col min-h-0">
-              <div className="flex-1 min-h-0">
-                <NumberPanel
-                  usedNumbers={usedNumbers}
-                  currentNumber={currentNumber}
-                  disabled={isGameFinished || isProcessing}
-                  shuffledDeck={shuffledDeck}
-                  revealedCovers={revealedCovers}
-                  onRevealCover={handleRevealCover}
-                />
+        <div className="flex-1 grid gap-3 min-h-0" style={{ gridTemplateColumns: "50fr 22fr" }}>
+          {/* 중앙: 역ㄷ자 보드 (가운데 빈 공간에 출제된 숫자) */}
+          <div className="min-h-0">
+            <GameBoard
+              board={aiBoard}
+              teamName="AI"
+              score={aiScore}
+              highlightIndex={lastPlacedIndex ?? undefined}
+              isManualMode={false}
+              showPlacementMarker={true}
+            >
+              <div className="font-digital text-muted" style={{ fontSize: "calc(var(--cell) * 0.3)" }}>출제된 숫자</div>
+              <div
+                className={`font-digital font-black leading-none ${drawn === "★" ? "text-purple-400" : ""} ${isProcessing ? "animate-pulse" : ""}`}
+                style={{ fontSize: "calc(var(--cell) * 2.4)", color: drawn === "★" ? undefined : "var(--text-strong)" }}
+              >
+                {drawn ?? "–"}
               </div>
-              <div className="mt-2 flex-shrink-0">
-                <ScoreTable />
+              <div
+                className={`font-digital font-bold mb-6 ${
+                  isGameFinished ? (aiScore >= 72 ? "text-accent" : "text-yellow-400") : isProcessing ? "text-primary" : "text-muted"
+                }`}
+                style={{ fontSize: "calc(var(--cell) * 0.32)", minHeight: "1.3em" }}
+              >
+                {statusText}
               </div>
-            </div>
+            </GameBoard>
+          </div>
 
-            {/* 중앙: 출제된 숫자 + AI 게임 보드 */}
-            <div className="flex flex-col min-h-0">
-              <DrawnNumberBar
-                drawn={currentNumber ?? aiDecisions[0]?.number ?? null}
-                placedIndex={isProcessing ? null : aiDecisions[0]?.index ?? null}
-                isProcessing={isProcessing}
-                isGameFinished={isGameFinished}
-                aiScore={aiScore}
-                aiLabel={useGemini ? "Gemini AI" : "AI"}
-              />
-              <div className="flex-1 min-h-0 mt-2">
-                <GameBoard
-                  board={aiBoard}
-                  teamName="AI"
-                  score={aiScore}
-                  highlightIndex={lastPlacedIndex ?? undefined}
-                  isManualMode={false}
-                  showPlacementMarker={true}
-                />
-              </div>
-            </div>
-
-            {/* 오른쪽: AI 결정 패널 */}
-            <div className="flex flex-col min-h-0">
-              <AIDecisionPanel
-                decisions={aiDecisions}
-                currentScore={aiScore}
-              />
-            </div>
+          {/* 오른쪽: AI 결정 패널 */}
+          <div className="flex flex-col min-h-0">
+            <AIDecisionPanel
+              decisions={aiDecisions}
+              currentScore={aiScore}
+            />
           </div>
         </div>
-      </main>
-    </div>
-  );
-}
-
-// 중앙 컬럼 위: 방금 뽑힌 숫자를 크게 보여 주는 막대 (강의장 뒤에서도 보이도록)
-function DrawnNumberBar({
-  drawn,
-  placedIndex,
-  isProcessing,
-  isGameFinished,
-  aiScore,
-  aiLabel,
-}: {
-  drawn: number | "★" | null;
-  placedIndex: number | null;
-  isProcessing: boolean;
-  isGameFinished: boolean;
-  aiScore: number;
-  aiLabel: string;
-}) {
-  const status = isGameFinished
-    ? `게임 완료! 최종 ${aiScore}점${aiScore >= 72 ? " (목표 달성!)" : ""}`
-    : isProcessing
-      ? `${aiLabel}가 최적 위치 분석 중...`
-      : placedIndex !== null
-        ? `→ ${placedIndex + 1}번 칸에 배치`
-        : "숫자 칸을 눌러 출제하세요";
-
-  return (
-    <div
-      className={`flex-shrink-0 h-28 rounded-xl border px-6 flex items-center gap-6 ${
-        isProcessing ? "border-primary/60 bg-primary/15" : "border-border"
-      }`}
-      style={isProcessing ? undefined : { backgroundColor: "var(--surface)" }}
-    >
-      <div className="font-digital text-sm text-muted leading-tight">
-        출제된
-        <br />
-        숫자
-      </div>
-      <div
-        className={`font-digital font-black leading-none w-36 text-center ${
-          drawn === "★" ? "text-purple-400" : "text-yellow-400"
-        } ${isProcessing ? "animate-pulse" : ""}`}
-        style={{ fontSize: "5.5rem" }}
-      >
-        {drawn ?? "–"}
-      </div>
-      <div
-        className={`flex-1 font-digital font-bold text-2xl ${
-          isGameFinished ? (aiScore >= 72 ? "text-accent" : "text-yellow-400") : isProcessing ? "text-primary" : ""
-        }`}
-        style={isGameFinished || isProcessing ? undefined : { color: "var(--text)" }}
-      >
-        {status}
       </div>
     </div>
   );

@@ -11,6 +11,7 @@ interface GameBoardProps {
   onCellClick?: (index: number) => void;
   showPlacementMarker?: boolean;
   showScoreMarker?: boolean;
+  children?: React.ReactNode; // 가운데 빈 공간 상단에 넣을 내용(출제된 숫자 등)
 }
 
 // 보드 레이아웃 (역ㄷ자 형태)
@@ -96,6 +97,7 @@ export default function GameBoard({
   isManualMode = false,
   onCellClick,
   showPlacementMarker = true,
+  children,
 }: GameBoardProps) {
 
   // 연속 구간 계산
@@ -161,14 +163,14 @@ export default function GameBoard({
   };
 
   return (
-    <div className="bg-surface/30 glass-effect rounded-xl p-3 border border-border h-full min-h-0">
+    <div className="bg-surface/30 glass-effect rounded-xl p-2 border border-border h-full min-h-0">
       {/* 컨테이너 크기에 맞춰 칸 크기(--cell)를 계산: 세로 10칸, 가로 6칸 */}
       <div className="w-full h-full" style={{ containerType: "size" }}>
         <div
           className="w-full h-full flex items-center justify-center"
           style={{
-            "--gap": "6px",
-            "--cell": "min(calc((100cqh - 54px) / 10), calc((100cqw - 30px) / 6))",
+            "--gap": "5px",
+            "--cell": "min(calc((100cqh - 45px) / 10), calc((100cqw - 25px) / 6))",
           } as React.CSSProperties}
         >
           {/* 역ㄷ자 보드 */}
@@ -197,13 +199,14 @@ export default function GameBoard({
                 right: "calc(var(--cell) + var(--gap))",
               }}
             >
-              <div className="font-digital text-muted" style={{ fontSize: "calc(var(--cell) * 0.36)" }}>{teamName}</div>
-              <div className="font-digital font-black text-yellow-400 drop-shadow-lg leading-none" style={{ fontSize: "calc(var(--cell) * 1.7)" }}>
+              {children}
+              <div className="font-digital text-muted" style={{ fontSize: "calc(var(--cell) * 0.3)" }}>{teamName}</div>
+              <div className="font-digital font-black text-yellow-400 drop-shadow-lg leading-none" style={{ fontSize: "calc(var(--cell) * 1.3)" }}>
                 {score}
               </div>
               <div className="font-digital text-muted" style={{ fontSize: "calc(var(--cell) * 0.3)" }}>POINTS</div>
               {showPlacementMarker && (
-                <div className="flex items-center gap-3 mt-4 text-xs text-muted font-mono-digital">
+                <div className="flex items-center gap-3 mt-3 text-xs text-muted font-mono-digital">
                   <div className="flex items-center gap-1">
                     <div className="w-3 h-3 bg-accent/30 rounded" />
                     <span>배치완료</span>
