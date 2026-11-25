@@ -22,7 +22,6 @@ function getCoverLabel(index: number): string {
 
 export default function NumberPanel({
   usedNumbers,
-  currentNumber,
   disabled = false,
   shuffledDeck = [],
   revealedCovers = [],
@@ -56,7 +55,7 @@ export default function NumberPanel({
   };
 
   return (
-    <div className="rounded-xl p-3 border" style={{ backgroundColor: "var(--surface)", borderColor: "var(--border)" }}>
+    <div className="rounded-xl p-2 border flex flex-col h-full min-h-0" style={{ backgroundColor: "var(--surface)", borderColor: "var(--border)" }}>
       {/* 헤더 */}
       <div className="flex items-center justify-between mb-2">
         <div>
@@ -75,7 +74,7 @@ export default function NumberPanel({
       <button
         onClick={handleRandomClick}
         disabled={disabled}
-        className="w-full mb-2 py-2 flex items-center justify-center gap-2 bg-primary/20 text-primary
+        className="w-full mb-2 py-1.5 flex items-center justify-center gap-2 bg-primary/20 text-primary
           rounded-lg font-digital font-bold text-sm hover:bg-primary/30 transition-colors
           disabled:opacity-50 disabled:cursor-not-allowed"
       >
@@ -83,18 +82,8 @@ export default function NumberPanel({
         <span>랜덤 숫자 출제</span>
       </button>
 
-      {/* 현재 선택된 숫자 표시 */}
-      {currentNumber !== null && (
-        <div className="mb-2 p-2 bg-primary/20 rounded-lg text-center animate-pulse">
-          <span className="text-xs text-muted font-mono-digital">출제된 숫자</span>
-          <div className={`font-digital text-3xl font-bold ${currentNumber === "★" ? "text-purple-400" : ""}`} style={{ color: currentNumber === "★" ? undefined : "var(--text)" }}>
-            {currentNumber}
-          </div>
-        </div>
-      )}
-
-      {/* 덮개 그리드 - 5열 x 8행 = 40개 */}
-      <div className="grid grid-cols-5 gap-1">
+      {/* 덮개 그리드 - 5열 x 8행 = 40개 (남은 높이를 꽉 채움) */}
+      <div className="grid grid-cols-5 grid-rows-8 gap-[3px] flex-1 min-h-0">
         {Array.from({ length: 40 }).map((_, idx) => {
           const isRevealed = revealedCovers[idx];
           const card = shuffledDeck[idx];
@@ -107,41 +96,32 @@ export default function NumberPanel({
               onClick={() => handleCoverClick(idx)}
               disabled={isRevealed || disabled}
               className={`
-                aspect-square flex items-center justify-center rounded-md font-digital font-bold
-                transition-all duration-300 transform
+                flex items-center justify-center rounded-md font-digital font-black leading-none
+                transition-transform duration-200
                 ${isRevealed
                   ? isJoker
-                    ? "bg-gradient-to-br from-purple-500/50 to-pink-500/50 text-purple-100 border border-purple-400/60 shadow-inner"
-                    : "bg-gradient-to-br from-emerald-500/40 to-teal-500/40 text-emerald-100 border border-emerald-400/60 shadow-inner"
-                  : `bg-gradient-to-br from-indigo-500/70 via-purple-500/60 to-pink-500/70
-                     backdrop-blur-sm border border-indigo-300/40
-                     shadow-lg shadow-purple-500/20
-                     hover:from-indigo-400/80 hover:via-purple-400/70 hover:to-pink-400/80
-                     hover:scale-105 hover:shadow-xl hover:shadow-purple-500/30
-                     hover:border-white/50
-                     active:scale-95 cursor-pointer`
+                    ? "bg-gradient-to-br from-purple-500/50 to-pink-500/50 border border-purple-400/60 shadow-inner"
+                    : "bg-gradient-to-br from-emerald-500/40 to-teal-500/40 border border-emerald-400/60 shadow-inner"
+                  : `bg-gradient-to-br from-indigo-500/80 via-purple-500/70 to-pink-500/80
+                     border border-indigo-300/40 shadow-md shadow-purple-500/20
+                     hover:brightness-125 hover:scale-105 active:scale-95 cursor-pointer`
                 }
               `}
-              style={{
-                minHeight: "36px",
-              }}
+              style={{ containerType: "size" }}
             >
-              {isRevealed ? (
-                <span className={`font-bold text-sm ${isJoker ? "text-white" : "text-white"}`}>
-                  {card}
-                </span>
-              ) : (
-                <span className="font-mono-digital font-bold text-xs text-white drop-shadow-md">
-                  {coverLabel}
-                </span>
-              )}
+              <span
+                className="text-white drop-shadow-md"
+                style={{ fontSize: "min(56cqh, 40cqw)", fontWeight: 900 }}
+              >
+                {isRevealed ? card : coverLabel}
+              </span>
             </button>
           );
         })}
       </div>
 
       {/* 범례 */}
-      <div className="mt-2 pt-2 border-t text-xs text-muted font-mono-digital" style={{ borderColor: "var(--border)" }}>
+      <div className="mt-1.5 pt-1.5 border-t text-xs text-muted font-mono-digital" style={{ borderColor: "var(--border)" }}>
         <div className="flex items-center justify-center gap-3">
           <div className="flex items-center gap-1">
             <div className="w-3 h-3 rounded bg-gradient-to-br from-indigo-500/70 to-pink-500/70 border border-indigo-300/40" />

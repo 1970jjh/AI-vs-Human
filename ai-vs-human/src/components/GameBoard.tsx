@@ -97,7 +97,6 @@ export default function GameBoard({
   onCellClick,
   showPlacementMarker = true,
 }: GameBoardProps) {
-  const cellSize = "w-14 h-14 text-lg";
 
   // 연속 구간 계산
   const runs = useMemo(() => calculateRuns(board), [board]);
@@ -129,7 +128,7 @@ export default function GameBoard({
         key={index}
         onClick={() => isEmpty && isManualMode && onCellClick?.(index)}
         className={`
-          ${cellSize} flex items-center justify-center rounded-lg border-2 font-digital font-bold
+          flex items-center justify-center rounded-lg border-2 font-digital font-bold
           transition-all duration-200
           ${isEmpty
             ? isManualMode
@@ -143,13 +142,16 @@ export default function GameBoard({
           }
           ${isHighlight ? "ring-2 ring-accent animate-pulse-glow" : ""}
         `}
-        style={isEmpty ? {
-          borderColor: 'var(--cell-border)',
-          backgroundColor: 'var(--cell-bg)',
-          color: 'var(--cell-text)'
-        } : !isJoker ? {
-          color: 'var(--text-strong)'
-        } : undefined}
+        style={{
+          width: "var(--cell)",
+          height: "var(--cell)",
+          fontSize: "calc(var(--cell) * 0.44)",
+          ...(isEmpty
+            ? { borderColor: "var(--cell-border)", backgroundColor: "var(--cell-bg)", color: "var(--cell-text)" }
+            : !isJoker
+              ? { color: "var(--text-strong)" }
+              : {}),
+        }}
       >
         <span className="font-digital" style={isEmpty ? { color: 'var(--cell-text)' } : undefined}>
           {isEmpty ? index + 1 : value}
@@ -159,52 +161,60 @@ export default function GameBoard({
   };
 
   return (
-    <div className="bg-surface/30 glass-effect rounded-xl p-4 border border-border">
-      {/* 범례 */}
-      {showPlacementMarker && (
-        <div className="flex items-center justify-end gap-4 mb-3 text-xs text-muted font-mono-digital">
-          <div className="flex items-center gap-1">
-            <div className="w-3 h-3 bg-accent/30 rounded" />
-            <span>배치완료</span>
-          </div>
-          <div className="flex items-center gap-1">
-            <div className="w-3 h-3 bg-purple-500/30 rounded" />
-            <span>조커</span>
-          </div>
-        </div>
-      )}
-
-      {/* 전체 레이아웃 - 역ㄷ자 형태 */}
-      <div className="flex relative">
-        {/* 중앙: 점수 표시 영역 (게임판 정중앙에 절대 위치) */}
-        <div className="absolute inset-0 flex items-center justify-center pointer-events-none" style={{ marginLeft: '60px' }}>
-          <div className="text-center">
-            <div className="font-digital text-lg text-muted mb-1">{teamName}</div>
-            <div className="font-digital text-6xl font-black text-yellow-400 drop-shadow-lg">
-              {score}
+    <div className="bg-surface/30 glass-effect rounded-xl p-3 border border-border h-full min-h-0">
+      {/* 컨테이너 크기에 맞춰 칸 크기(--cell)를 계산: 세로 10칸, 가로 6칸 */}
+      <div className="w-full h-full" style={{ containerType: "size" }}>
+        <div
+          className="w-full h-full flex items-center justify-center"
+          style={{
+            "--gap": "6px",
+            "--cell": "min(calc((100cqh - 54px) / 10), calc((100cqw - 30px) / 6))",
+          } as React.CSSProperties}
+        >
+          {/* 역ㄷ자 보드 */}
+          <div className="relative flex flex-col" style={{ gap: "var(--gap)" }}>
+            {/* 상단 가로줄 (1-6) */}
+            <div className="flex" style={{ gap: "var(--gap)" }}>
+              {BOARD_LAYOUT.top.map((idx) => renderCell(idx))}
             </div>
-            <div className="font-digital text-base text-muted mt-1">POINTS</div>
-          </div>
-        </div>
 
-        {/* 왼쪽 여백 */}
-        <div style={{ minWidth: '120px' }} />
+            {/* 오른쪽 세로줄 (7-14) */}
+            <div className="flex flex-col self-end" style={{ gap: "var(--gap)" }}>
+              {BOARD_LAYOUT.right.map((idx) => renderCell(idx))}
+            </div>
 
-        {/* 오른쪽: 보드 영역 */}
-        <div className="flex flex-col">
-          {/* 상단 가로줄 (1-6) */}
-          <div className="flex gap-1">
-            {BOARD_LAYOUT.top.map((idx) => renderCell(idx))}
-          </div>
+            {/* 하단 가로줄 (20-15) */}
+            <div className="flex" style={{ gap: "var(--gap)" }}>
+              {BOARD_LAYOUT.bottom.map((idx) => renderCell(idx))}
+            </div>
 
-          {/* 오른쪽 세로줄 (7-14) - 6번 칸 바로 아래에 붙임 */}
-          <div className="flex flex-col gap-1 mt-1 self-end">
-            {BOARD_LAYOUT.right.map((idx) => renderCell(idx))}
-          </div>
-
-          {/* 하단 가로줄 (20-15) */}
-          <div className="flex gap-1 mt-1">
-            {BOARD_LAYOUT.bottom.map((idx) => renderCell(idx))}
+            {/* 가운데 빈 공간: 점수 + 범례 */}
+            <div
+              className="absolute left-0 flex flex-col items-center justify-center pointer-events-none text-center"
+              style={{
+                top: "calc(var(--cell) + var(--gap))",
+                bottom: "calc(var(--cell) + var(--gap))",
+                right: "calc(var(--cell) + var(--gap))",
+              }}
+            >
+              <div className="font-digital text-muted" style={{ fontSize: "calc(var(--cell) * 0.36)" }}>{teamName}</div>
+              <div className="font-digital font-black text-yellow-400 drop-shadow-lg leading-none" style={{ fontSize: "calc(var(--cell) * 1.7)" }}>
+                {score}
+              </div>
+              <div className="font-digital text-muted" style={{ fontSize: "calc(var(--cell) * 0.3)" }}>POINTS</div>
+              {showPlacementMarker && (
+                <div className="flex items-center gap-3 mt-4 text-xs text-muted font-mono-digital">
+                  <div className="flex items-center gap-1">
+                    <div className="w-3 h-3 bg-accent/30 rounded" />
+                    <span>배치완료</span>
+                  </div>
+                  <div className="flex items-center gap-1">
+                    <div className="w-3 h-3 bg-purple-500/30 rounded" />
+                    <span>조커</span>
+                  </div>
+                </div>
+              )}
+            </div>
           </div>
         </div>
       </div>

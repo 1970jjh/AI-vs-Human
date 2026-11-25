@@ -1,6 +1,9 @@
 import { NextRequest, NextResponse } from "next/server";
 import { getAIDecision, AIAnalysisRequest } from "@/lib/gemini";
 
+// Hydrogen 은 한 수에 최대 30초 가까이 생각하므로 함수 제한 시간을 넉넉히 둔다
+export const maxDuration = 60;
+
 export async function POST(request: NextRequest) {
   try {
     const body: AIAnalysisRequest = await request.json();

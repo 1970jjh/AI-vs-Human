@@ -36,8 +36,8 @@ export default function AIDecisionPanel({
     <div className="bg-surface rounded-xl p-4 border border-border h-full flex flex-col min-h-0">
       {/* 헤더 + 통계 */}
       <div className="mb-3 flex-shrink-0">
-        <h3 className="font-digital font-bold text-lg text-primary mb-2">
-          Gemini 3.8 Flash AI vs Human
+        <h3 className="font-digital font-bold text-base leading-tight text-primary mb-2">
+          Gemini 4 Hydrogen AI vs Human
         </h3>
 
         {/* 통계 - 제목 바로 아래 */}
