@@ -7,16 +7,19 @@ interface AIDecision {
   confidence: number;
   timestamp: number;
   strategy?: string;
+  outlook?: { low: number; mid: number; high: number };
 }
 
 interface AIDecisionPanelProps {
   decisions: AIDecision[];
   currentScore: number;
+  title: string;
 }
 
 export default function AIDecisionPanel({
   decisions,
   currentScore,
+  title,
 }: AIDecisionPanelProps) {
   const getConfidenceColor = (confidence: number) => {
     if (confidence >= 90) return "text-green-400";
@@ -37,7 +40,7 @@ export default function AIDecisionPanel({
       {/* 헤더 + 통계 */}
       <div className="mb-3 flex-shrink-0">
         <h3 className="font-digital font-bold text-base leading-tight text-primary mb-2">
-          Gemini 4 Hydrogen AI vs Human
+          {title}
         </h3>
 
         {/* 통계 - 제목 바로 아래 */}
@@ -115,6 +118,25 @@ export default function AIDecisionPanel({
                   style={{ width: `${decision.confidence}%` }}
                 />
               </div>
+
+              {/* 목표 기대값: 이 수를 둔 뒤 예상되는 최종 점수 */}
+              {decision.outlook && (
+                <div className="mb-2 p-2 rounded-lg border border-border bg-surface/50">
+                  <div className="text-xs text-muted font-mono-digital mb-1">목표 기대값 (예상 최종 점수)</div>
+                  <div className="grid grid-cols-3 gap-2 text-center">
+                    {([
+                      ["보수", decision.outlook.low, "text-orange-400"],
+                      ["중립", decision.outlook.mid, "text-yellow-400"],
+                      ["긍정", decision.outlook.high, "text-green-400"],
+                    ] as const).map(([label, value, color]) => (
+                      <div key={label}>
+                        <div className="text-xs text-muted font-mono-digital">{label}</div>
+                        <div className={`font-digital font-bold text-xl ${color}`}>{value}점</div>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              )}
 
               {/* 전략 */}
               {decision.strategy && (

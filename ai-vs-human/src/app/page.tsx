@@ -10,8 +10,8 @@ import {
   calculateScore,
   createDeck,
   shuffleDeck,
-  findOptimalPosition,
 } from "@/lib/ai-logic";
+import { engineDecision, slotOutlook, Outlook } from "@/lib/engine";
 import { playScoreSound, playFanfareSound } from "@/lib/sounds";
 
 interface AIDecision {
@@ -21,6 +21,7 @@ interface AIDecision {
   confidence: number;
   timestamp: number;
   strategy?: string;
+  outlook?: Outlook;
 }
 
 const ADMIN_PASSWORD = "6749467";
@@ -51,7 +52,7 @@ export default function Home() {
   const [lastPlacedIndex, setLastPlacedIndex] = useState<number | null>(null);
   const [aiDecisions, setAiDecisions] = useState<AIDecision[]>([]);
   const [isProcessing, setIsProcessing] = useState(false);
-  const [useGemini, setUseGemini] = useState(true);
+  const [useGemini, setUseGemini] = useState(false); // 기본: 무료 시뮬레이션 엔진
   const prevScoreRef = useRef(0);
   const hasPlayedFanfareRef = useRef(false);
 
@@ -146,25 +147,23 @@ export default function Home() {
       setIsProcessing(true);
       setCurrentNumber(num);
 
-      const remaining = getRemainingNumbers().filter((n) => n !== num);
+      // 아직 안 나온 카드: 공개 전 덮개 카드에서 방금 뽑힌 카드 "한 장만" 뺀다
+      // (11~19는 2장씩이라 filter 로 전부 빼면 남은 한 장까지 사라진다)
+      const remaining = [...getRemainingNumbers()];
+      const selfIdx = remaining.indexOf(num);
+      if (selfIdx !== -1) remaining.splice(selfIdx, 1);
+      const drawsLeft = BOARD_SIZE - turn - 1;
       let decision;
 
-      // ★ 최우선: 11-19 같은 숫자가 이미 보드에 있으면 인접 배치 (Gemini보다 우선!)
-      if (typeof num === "number" && num >= 11 && num <= 19) {
-        const existingIndex = aiBoard.findIndex((cell) => cell === num);
-        if (existingIndex !== -1) {
-          // 같은 숫자가 이미 있음 → 로컬 로직으로 인접 배치 강제
-          decision = findOptimalPosition(aiBoard, num, remaining);
-        }
-      }
-
-      // 인접 배치가 아닌 경우에만 Gemini 호출
-      if (!decision && useGemini) {
+      if (useGemini) {
         decision = await callGeminiAPI(aiBoard, num, remaining, turn + 1);
       }
 
-      if (!decision) {
-        decision = findOptimalPosition(aiBoard, num, remaining);
+      // Gemini OFF 이거나 실패하면: 시뮬레이션 엔진(무료, 브라우저에서 계산)
+      if (!decision || decision.strategy === "FALLBACK") {
+        // 화면이 "분석 중"을 먼저 그리도록 한 틱 양보
+        await new Promise((r) => setTimeout(r, 30));
+        decision = engineDecision(aiBoard, num, remaining, drawsLeft);
       }
 
       if (decision && decision.index !== -1 && decision.index < BOARD_SIZE && aiBoard[decision.index] === null) {
@@ -181,6 +180,7 @@ export default function Home() {
             reason: decision.reason,
             confidence: decision.confidence,
             strategy: decision.strategy,
+            outlook: slotOutlook(aiBoard, num, remaining, drawsLeft, decision.index),
             timestamp: Date.now(),
           },
           ...prev,
@@ -423,6 +423,7 @@ export default function Home() {
             <AIDecisionPanel
               decisions={aiDecisions}
               currentScore={aiScore}
+              title={useGemini ? "Gemini 4 Hydrogen AI vs Human" : "Simulation Engine AI vs Human"}
             />
           </div>
         </div>
