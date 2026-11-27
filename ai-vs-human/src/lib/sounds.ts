@@ -2,6 +2,8 @@
  * 게임 효과음 유틸리티 (Web Audio API 사용)
  */
 
+import { volumeFactor } from "./music";
+
 let audioContext: AudioContext | null = null;
 
 function getAudioContext(): AudioContext {
@@ -15,6 +17,7 @@ function getAudioContext(): AudioContext {
  * 점수 증가 시 '띠링' 효과음
  */
 export function playScoreSound(): void {
+  if (volumeFactor() === 0) return;
   try {
     const ctx = getAudioContext();
     const oscillator = ctx.createOscillator();
@@ -28,7 +31,7 @@ export function playScoreSound(): void {
     oscillator.frequency.setValueAtTime(1108.73, ctx.currentTime + 0.1); // C#6
     oscillator.type = 'sine';
 
-    gainNode.gain.setValueAtTime(0.3, ctx.currentTime);
+    gainNode.gain.setValueAtTime(0.3 * volumeFactor(), ctx.currentTime);
     gainNode.gain.exponentialRampToValueAtTime(0.01, ctx.currentTime + 0.2);
 
     oscillator.start(ctx.currentTime);
@@ -42,6 +45,7 @@ export function playScoreSound(): void {
  * 게임 완료 시 '빵빠레' 효과음
  */
 export function playFanfareSound(): void {
+  if (volumeFactor() === 0) return;
   try {
     const ctx = getAudioContext();
 
@@ -65,7 +69,7 @@ export function playFanfareSound(): void {
       oscillator.frequency.setValueAtTime(note.freq, ctx.currentTime + note.start);
       oscillator.type = 'triangle';
 
-      gainNode.gain.setValueAtTime(0.4, ctx.currentTime + note.start);
+      gainNode.gain.setValueAtTime(0.4 * volumeFactor(), ctx.currentTime + note.start);
       gainNode.gain.exponentialRampToValueAtTime(0.01, ctx.currentTime + note.start + note.duration);
 
       oscillator.start(ctx.currentTime + note.start);

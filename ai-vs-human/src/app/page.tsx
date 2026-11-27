@@ -15,7 +15,7 @@ import {
 } from "@/lib/ai-logic";
 import { engineDecision, slotOutlook, Outlook } from "@/lib/engine";
 import { playScoreSound, playFanfareSound } from "@/lib/sounds";
-import { startMusic, stopMusic } from "@/lib/music";
+import { startMusic, stopMusic, setVolumeLevel, VOLUME_DEFAULT, VOLUME_MAX } from "@/lib/music";
 
 interface AIDecision {
   number: number | "★";
@@ -43,6 +43,13 @@ export default function Home() {
   // 테마 상태
   const [isDarkMode, setIsDarkMode] = useState(true);
   const [isMusicOn, setIsMusicOn] = useState(false);
+  const [volume, setVolume] = useState(VOLUME_DEFAULT);
+  const changeVolume = (delta: number) => setVolume((v) => Math.max(0, Math.min(VOLUME_MAX, v + delta)));
+
+  // 음량(배경음악·효과음 공통) 반영
+  useEffect(() => {
+    setVolumeLevel(volume);
+  }, [volume]);
 
   // 배경음악 켜기/끄기 (화면을 떠날 때도 끈다)
   useEffect(() => {
@@ -274,6 +281,7 @@ export default function Home() {
     score: aiScore,
     finished: isGameFinished,
     music: isMusicOn,
+    volume,
   };
   const roomStateRef = useRef(roomState);
   roomStateRef.current = roomState;
@@ -287,6 +295,7 @@ export default function Home() {
     else if (cmd.type === "decide") { if (currentNumber !== null) handleSelectNumber(currentNumber); }
     else if (cmd.type === "reset") handleReset();
     else if (cmd.type === "music") setIsMusicOn((v) => !v);
+    else if (cmd.type === "volume") changeVolume(cmd.delta > 0 ? 1 : -1);
   };
 
   useEffect(() => {
@@ -305,7 +314,7 @@ export default function Home() {
   // 상태가 바뀔 때마다 휴대폰에 알린다
   useEffect(() => {
     sendStateRef.current(roomStateRef.current);
-  }, [shuffledDeck, revealedCovers, currentNumber, isProcessing, turn, aiScore, isMusicOn]);
+  }, [shuffledDeck, revealedCovers, currentNumber, isProcessing, turn, aiScore, isMusicOn, volume]);
 
   // 비밀번호 확인
   const handlePasswordSubmit = (e: React.FormEvent) => {
@@ -473,6 +482,13 @@ export default function Home() {
             >
               {isMusicOn ? "🎵 Music ON" : "🎵 Music OFF"}
             </button>
+
+            {/* 음량: 배경음악·효과음 공통 */}
+            <div className="flex items-center rounded-lg border font-digital text-sm" style={{ borderColor: "var(--border)", color: "var(--text)" }}>
+              <button onClick={() => changeVolume(-1)} disabled={volume === 0} aria-label="소리 줄이기" className="px-2.5 py-1.5 disabled:opacity-30">−</button>
+              <span className="w-12 text-center" title="음량">🔊 {volume}</span>
+              <button onClick={() => changeVolume(1)} disabled={volume === VOLUME_MAX} aria-label="소리 키우기" className="px-2.5 py-1.5 disabled:opacity-30">+</button>
+            </div>
 
             {/* 다크/라이트 모드 토글 */}
             <button

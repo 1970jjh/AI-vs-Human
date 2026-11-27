@@ -187,6 +187,24 @@ export default function RemotePage() {
           🎵 Music {state.music ? "ON" : "OFF"}
         </button>
       </div>
+      {/* 음량: 배경음악·효과음 공통 */}
+      <div className="grid grid-cols-[1fr_auto_1fr] items-center gap-2 flex-shrink-0">
+        <button
+          onClick={() => send({ type: "volume", delta: -1 })}
+          disabled={state.volume <= 0}
+          className="py-3 rounded-xl border border-border font-digital font-bold disabled:opacity-30"
+        >
+          🔉 소리 −
+        </button>
+        <span className="font-digital font-bold text-lg w-14 text-center">{state.volume}</span>
+        <button
+          onClick={() => send({ type: "volume", delta: 1 })}
+          disabled={state.volume >= 10}
+          className="py-3 rounded-xl border border-border font-digital font-bold disabled:opacity-30"
+        >
+          🔊 소리 +
+        </button>
+      </div>
     </div>
   );
 }

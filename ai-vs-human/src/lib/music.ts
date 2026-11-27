@@ -6,6 +6,21 @@ let ctx: AudioContext | null = null;
 let timer: ReturnType<typeof setInterval> | null = null;
 let master: GainNode | null = null;
 
+// 음량 단계 0~10 (5 = 기본 크기, 10 = 두 배). 배경음악·효과음 공통.
+export const VOLUME_MAX = 10;
+export const VOLUME_DEFAULT = 5;
+let volumeLevel = VOLUME_DEFAULT;
+const BASE_GAIN = 0.18;
+
+export function volumeFactor(): number {
+  return volumeLevel / VOLUME_DEFAULT;
+}
+
+export function setVolumeLevel(level: number): void {
+  volumeLevel = Math.max(0, Math.min(VOLUME_MAX, level));
+  if (master) master.gain.setTargetAtTime(BASE_GAIN * volumeFactor(), master.context.currentTime, 0.05);
+}
+
 const CHORDS = [
   [220.0, 261.63, 329.63], // Am
   [174.61, 220.0, 261.63], // F
@@ -74,7 +89,7 @@ export function startMusic(): void {
     const c = ctx;
     if (c.state === "suspended") c.resume();
     const m = c.createGain();
-    m.gain.value = 0.18;
+    m.gain.value = BASE_GAIN * volumeFactor();
     m.connect(c.destination);
     master = m;
     let step = 0;

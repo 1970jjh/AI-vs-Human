@@ -17,6 +17,7 @@ export interface RoomState {
   score: number;
   finished: boolean;
   music: boolean;
+  volume: number; // 0~10
 }
 
 export type RoomCommand =
@@ -24,7 +25,8 @@ export type RoomCommand =
   | { type: "reveal"; index: number }
   | { type: "decide" }
   | { type: "reset" }
-  | { type: "music" };
+  | { type: "music" }
+  | { type: "volume"; delta: number };
 
 let client: SupabaseClient | null = null;
 
