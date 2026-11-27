@@ -5,7 +5,9 @@ import GameBoard from "@/components/GameBoard";
 import ScoreTable from "@/components/ScoreTable";
 import NumberPanel from "@/components/NumberPanel";
 import AIDecisionPanel from "@/components/AIDecisionPanel";
-import { BOARD_SIZE } from "@/lib/types";
+import QRCode from "qrcode";
+import { BOARD_SIZE, ADMIN_PASSWORD } from "@/lib/types";
+import { joinRoom, newRoomCode, isRoomCode, RoomState, RoomCommand } from "@/lib/room";
 import {
   calculateScore,
   createDeck,
@@ -25,7 +27,6 @@ interface AIDecision {
   outlook?: Outlook;
 }
 
-const ADMIN_PASSWORD = "6749467";
 
 // 게임용 40장 덱 생성 (전체 40장을 셔플)
 function createGameDeck(): (number | "★")[] {
@@ -240,6 +241,72 @@ export default function Home() {
 
   const isGameFinished = turn >= BOARD_SIZE;
 
+  // ── 강사 휴대폰 리모컨 연결 ──────────────────────────────
+  const [roomCode, setRoomCode] = useState<string | null>(null);
+  const [showRemote, setShowRemote] = useState(false);
+  const [remoteQr, setRemoteQr] = useState("");
+  const [remoteConnected, setRemoteConnected] = useState(false);
+  const sendStateRef = useRef<(s: RoomState) => void>(() => {});
+
+  // 방 코드: 탭마다 하나(새로고침해도 유지) → 강사마다 다른 방
+  useEffect(() => {
+    const saved = sessionStorage.getItem("avh-room");
+    const code = isRoomCode(saved) ? saved : newRoomCode();
+    sessionStorage.setItem("avh-room", code);
+    setRoomCode(code);
+  }, []);
+
+  const remoteUrl = roomCode && typeof window !== "undefined" ? `${window.location.origin}/remote?room=${roomCode}` : "";
+  useEffect(() => {
+    if (!remoteUrl) return;
+    QRCode.toDataURL(remoteUrl, { width: 360, margin: 2 })
+      .then(setRemoteQr)
+      .catch((e) => console.error("QR 생성 실패:", e));
+  }, [remoteUrl]);
+
+  // 휴대폰에 보내는 현재 상태
+  const roomState: RoomState = {
+    deck: shuffledDeck,
+    revealed: revealedCovers,
+    current: currentNumber,
+    processing: isProcessing,
+    turn,
+    score: aiScore,
+    finished: isGameFinished,
+    music: isMusicOn,
+  };
+  const roomStateRef = useRef(roomState);
+  roomStateRef.current = roomState;
+
+  // 휴대폰 명령 처리 (항상 최신 핸들러를 쓰도록 ref 에 담는다)
+  const commandRef = useRef<(cmd: RoomCommand) => void>(() => {});
+  commandRef.current = (cmd) => {
+    setRemoteConnected(true);
+    if (cmd.type === "hello") sendStateRef.current(roomStateRef.current);
+    else if (cmd.type === "reveal") handleRevealCover(cmd.index);
+    else if (cmd.type === "decide") { if (currentNumber !== null) handleSelectNumber(currentNumber); }
+    else if (cmd.type === "reset") handleReset();
+    else if (cmd.type === "music") setIsMusicOn((v) => !v);
+  };
+
+  useEffect(() => {
+    if (!roomCode || !isAuthenticated) return;
+    const conn = joinRoom(roomCode, {
+      onCommand: (cmd) => commandRef.current(cmd),
+      onReady: () => conn.sendState(roomStateRef.current),
+    });
+    sendStateRef.current = conn.sendState;
+    return () => {
+      sendStateRef.current = () => {};
+      conn.leave();
+    };
+  }, [roomCode, isAuthenticated]);
+
+  // 상태가 바뀔 때마다 휴대폰에 알린다
+  useEffect(() => {
+    sendStateRef.current(roomStateRef.current);
+  }, [shuffledDeck, revealedCovers, currentNumber, isProcessing, turn, aiScore, isMusicOn]);
+
   // 비밀번호 확인
   const handlePasswordSubmit = (e: React.FormEvent) => {
     e.preventDefault();
@@ -325,6 +392,34 @@ export default function Home() {
       className="h-screen p-3 grid gap-3 overflow-hidden"
       style={{ backgroundColor: "var(--background)", gridTemplateColumns: "28fr 72fr" }}
     >
+      {/* 리모컨 QR 창: 강사가 휴대폰으로 찍고 닫는다 */}
+      {showRemote && (
+        <div
+          className="fixed inset-0 z-50 flex items-center justify-center bg-black/80"
+          onClick={() => setShowRemote(false)}
+        >
+          <div
+            className="p-6 rounded-2xl border text-center"
+            style={{ backgroundColor: "var(--surface)", borderColor: "var(--border)" }}
+            onClick={(e) => e.stopPropagation()}
+          >
+            <h2 className="font-digital text-2xl font-bold mb-1" style={{ color: "var(--text)" }}>강사 휴대폰 리모컨</h2>
+            <p className="font-mono-digital text-sm text-muted mb-4">방 코드 {roomCode} · 휴대폰 카메라로 찍으세요</p>
+            {remoteQr && <img src={remoteQr} alt="리모컨 접속 QR" width={360} height={360} className="mx-auto rounded-xl bg-white" />}
+            <p className="font-mono-digital text-xs text-muted mt-3 break-all max-w-[360px]">{remoteUrl}</p>
+            <p className={`font-digital text-sm mt-3 ${remoteConnected ? "text-accent" : "text-muted"}`}>
+              {remoteConnected ? "✅ 휴대폰이 연결되었습니다" : "휴대폰 접속을 기다리는 중..."}
+            </p>
+            <button
+              onClick={() => setShowRemote(false)}
+              className="mt-4 px-6 py-2 rounded-lg font-digital font-bold bg-gradient-to-r from-purple-500 to-cyan-500 text-white"
+            >
+              닫기
+            </button>
+          </div>
+        </div>
+      )}
+
       {/* 왼쪽: 숫자 선택 패널(화면 맨 위부터 끝까지) + 점수표 */}
       <div className="flex flex-col min-h-0">
         <div className="flex-1 min-h-0">
@@ -355,6 +450,18 @@ export default function Home() {
           </div>
 
           <div className="flex items-center gap-4">
+            {/* 강사 휴대폰 리모컨 QR */}
+            <button
+              onClick={() => setShowRemote(true)}
+              className={`px-3 py-1.5 rounded-lg text-sm font-digital font-medium transition-colors border ${
+                remoteConnected
+                  ? "bg-accent/20 text-accent border-accent/50"
+                  : "bg-muted/20 text-muted border-muted/50"
+              }`}
+            >
+              📱 리모컨{remoteConnected ? " 연결됨" : ""}
+            </button>
+
             {/* 배경음악 토글 */}
             <button
               onClick={() => setIsMusicOn(!isMusicOn)}

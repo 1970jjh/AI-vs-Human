@@ -35,6 +35,9 @@ export interface GameState {
 
 export const BOARD_SIZE = 20;
 
+// 화면 입장용 간이 비밀번호(대시보드·강사 리모컨 공용)
+export const ADMIN_PASSWORD = "6749467";
+
 export const SCORE_TABLE = [
   0, 0, 1, 3, 5, 7, 9, 11, 15, 20, 25, 30, 35, 40, 50, 60, 70, 85, 100, 150, 300,
 ];
